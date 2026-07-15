@@ -83,5 +83,5 @@ temp/
 # Sensitive donor source documents and local uploads
 /catalog.pdf
 uploads/
-imports/
+/imports/
 private/

@@ -1,10 +1,12 @@
 import { signOut } from 'firebase/auth'
+import { useState } from 'react'
 
 import './App.css'
 
 import { AuthGate } from './components/AuthGate'
 import { DonorManagement } from './features/donors/DonorManagement'
 import type { DonorRepository } from './features/donors/donorRepository'
+import { PdfImport } from './features/imports/PdfImport'
 import { auth } from './lib/firebase'
 
 interface AdminDashboardProps {
@@ -14,6 +16,8 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ email, onSignOut, donorRepository }: AdminDashboardProps) {
+  const [activePage, setActivePage] = useState<'donors' | 'import'>('donors')
+
   return (
     <div className="admin-layout" dir="rtl">
       <aside className="sidebar">
@@ -23,8 +27,8 @@ export function AdminDashboard({ email, onSignOut, donorRepository }: AdminDashb
             <div><strong>מערכת ניהול תורמים</strong><span>ניהול קליני</span></div>
           </div>
           <nav className="primary-nav" aria-label="ניווט ראשי">
-            <a className="active" href="#donors" aria-current="page"><span aria-hidden="true">◉</span> תורמים</a>
-            <button type="button" disabled title="ייבוא קבצים יתווסף בשלב הבא"><span aria-hidden="true">⇧</span> ייבוא קבצים</button>
+            <button className={activePage === 'donors' ? 'active' : undefined} type="button" aria-current={activePage === 'donors' ? 'page' : undefined} onClick={() => setActivePage('donors')}><span aria-hidden="true">◉</span> תורמים</button>
+            <button className={activePage === 'import' ? 'active' : undefined} type="button" aria-current={activePage === 'import' ? 'page' : undefined} onClick={() => setActivePage('import')}><span aria-hidden="true">⇧</span> ייבוא קבצים</button>
             <button type="button" disabled title="הגדרות יתווספו בהמשך"><span aria-hidden="true">⚙</span> הגדרות</button>
           </nav>
         </div>
@@ -33,8 +37,10 @@ export function AdminDashboard({ email, onSignOut, donorRepository }: AdminDashb
           <button type="button" onClick={() => void onSignOut()}><span aria-hidden="true">↪</span> יציאה</button>
         </div>
       </aside>
-      <main className="app-shell" id="donors">
-        <DonorManagement adminEmail={email} repository={donorRepository} />
+      <main className="app-shell" id={activePage}>
+        {activePage === 'donors'
+          ? <DonorManagement adminEmail={email} repository={donorRepository} />
+          : <PdfImport />}
       </main>
     </div>
   )
