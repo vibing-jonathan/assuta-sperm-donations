@@ -24,10 +24,10 @@ describe('App', () => {
     )
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'ניהול תורמי זרע' }),
+      screen.getByRole('heading', { level: 1, name: 'ניהול תורמים' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('main')).toHaveAttribute('dir', 'rtl')
+    expect(screen.getByText('מערכת ניהול תורמים').closest('.admin-layout')).toHaveAttribute('dir', 'rtl')
     expect(screen.getByText('jgabbayj@gmail.com')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 2, name: 'תורמים' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'רשימת תורמים' })).toBeInTheDocument()
   })
 })

@@ -15,42 +15,35 @@ interface AdminDashboardProps {
 
 export function AdminDashboard({ email, onSignOut, donorRepository }: AdminDashboardProps) {
   return (
-    <main className="app-shell" dir="rtl">
-      <nav className="account-bar" aria-label="חשבון מנהל">
-        <span>{email}</span>
-        <button className="text-button" type="button" onClick={() => void onSignOut()}>
-          יציאה
-        </button>
-      </nav>
-
-      <header className="app-header">
-        <p className="app-eyebrow">מערכת אדמיניסטרטיבית</p>
-        <h1>ניהול תורמי זרע</h1>
-        <p className="app-subtitle">
-          סביבת עבודה מאובטחת לניהול תורמים וייבוא נתונים.
-        </p>
-      </header>
-
-      <section className="status-card" aria-labelledby="foundation-title">
+    <div className="admin-layout" dir="rtl">
+      <aside className="sidebar">
         <div>
-          <p className="status-label">מצב המערכת</p>
-          <h2 id="foundation-title">סביבת ניהול מאובטחת</h2>
-          <p>הנתונים נשמרים ב-Firestore וזמינים למנהלים מורשים בלבד.</p>
+          <div className="brand-lockup">
+            <span className="brand-mark" aria-hidden="true">✚</span>
+            <div><strong>מערכת ניהול תורמים</strong><span>ניהול קליני</span></div>
+          </div>
+          <nav className="primary-nav" aria-label="ניווט ראשי">
+            <a className="active" href="#donors" aria-current="page"><span aria-hidden="true">◉</span> תורמים</a>
+            <button type="button" disabled title="ייבוא קבצים יתווסף בשלב הבא"><span aria-hidden="true">⇧</span> ייבוא קבצים</button>
+            <button type="button" disabled title="הגדרות יתווספו בהמשך"><span aria-hidden="true">⚙</span> הגדרות</button>
+          </nav>
         </div>
-        <span className="status-badge">מנהל מורשה</span>
-      </section>
-
-      <DonorManagement adminEmail={email} repository={donorRepository} />
-    </main>
+        <div className="account-panel">
+          <span className="account-email" dir="ltr">{email}</span>
+          <button type="button" onClick={() => void onSignOut()}><span aria-hidden="true">↪</span> יציאה</button>
+        </div>
+      </aside>
+      <main className="app-shell" id="donors">
+        <DonorManagement adminEmail={email} repository={donorRepository} />
+      </main>
+    </div>
   )
 }
 
 function App() {
   return (
     <AuthGate>
-      {(user) => (
-        <AdminDashboard email={user.email ?? ''} onSignOut={() => signOut(auth)} />
-      )}
+      {(user) => <AdminDashboard email={user.email ?? ''} onSignOut={() => signOut(auth)} />}
     </AuthGate>
   )
 }

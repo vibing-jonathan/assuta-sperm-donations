@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="he"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>בדיקת נתונים שחולצו - ניהול תורמים</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#7da6ef",
+                        "tertiary-fixed": "#d7e3ff",
+                        "on-secondary-fixed-variant": "#43474b",
+                        "surface-container": "#e5eeff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#114689",
+                        "surface-container-low": "#eff4ff",
+                        "outline": "#747782",
+                        "on-secondary-fixed": "#171c1f",
+                        "on-primary-container": "#83a5ef",
+                        "surface-tint": "#395da1",
+                        "on-secondary-container": "#5e6367",
+                        "on-surface": "#0b1c30",
+                        "surface-container-high": "#dce9ff",
+                        "on-primary-fixed-variant": "#1d4588",
+                        "tertiary-fixed-dim": "#abc7ff",
+                        "outline-variant": "#c4c6d2",
+                        "on-error": "#ffffff",
+                        "primary-container": "#0b397c",
+                        "inverse-surface": "#213145",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-dim": "#cbdbf5",
+                        "secondary-fixed": "#dfe3e7",
+                        "tertiary": "#002552",
+                        "on-surface-variant": "#434750",
+                        "on-background": "#0b1c30",
+                        "primary-fixed-dim": "#aec6ff",
+                        "on-primary": "#ffffff",
+                        "surface": "#f8f9ff",
+                        "primary-fixed": "#d8e2ff",
+                        "primary": "#002457",
+                        "secondary-container": "#dce0e4",
+                        "tertiary-container": "#003a7a",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#d3e4fe",
+                        "surface-bright": "#f8f9ff",
+                        "secondary-fixed-dim": "#c3c7cb",
+                        "secondary": "#5a5f62",
+                        "on-primary-fixed": "#001a42",
+                        "inverse-primary": "#aec6ff",
+                        "background": "#f8f9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed": "#001b3f",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "stack-sm": "8px",
+                        "gutter": "16px",
+                        "inset-stretch": "12px 16px",
+                        "inset-squish": "8px 12px",
+                        "stack-md": "16px",
+                        "container-margin": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "title-sm": ["Inter"],
+                        "body-dense": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-base": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "title-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                        "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-mono": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+                        "display-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Custom scrollbar for tables */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f8f9ff; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c4c6d2; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #747782; 
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-base min-h-screen flex rtl overflow-hidden">
+<!-- App Shell: Side Nav -->
+<nav class="docked fixed right-0 top-0 h-full w-64 border-l border-outline-variant bg-surface-container-low dark:bg-surface-container-lowest flex flex-col justify-between py-gutter px-stack-md z-20">
+<div>
+<!-- Header -->
+<div class="flex items-center gap-stack-sm mb-container-margin">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined">local_hospital</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-inverse-primary leading-tight">מערכת ניהול תורמים</h1>
+<p class="font-body-dense text-body-dense text-on-surface-variant">ניהול קליני</p>
+</div>
+</div>
+<!-- Tabs -->
+<ul class="space-y-unit">
+<li>
+<a class="flex items-center gap-stack-sm p-inset-squish rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-secondary-container dark:hover:bg-secondary-container transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-base text-body-base">תורמים</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-stack-sm p-inset-squish rounded text-primary dark:text-inverse-primary font-bold border-r-4 border-primary hover:bg-secondary-container dark:hover:bg-secondary-container transition-colors duration-200 ease-in-out bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="upload_file">upload_file</span>
+<span class="font-body-base text-body-base">ייבוא קבצים</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-stack-sm p-inset-squish rounded text-on-surface-variant dark:text-on-surface-variant hover:bg-secondary-container dark:hover:bg-secondary-container transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-base text-body-base">הגדרות</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Footer -->
+<ul class="space-y-unit mt-auto border-t border-outline-variant pt-stack-sm">
+<li>
+<a class="flex items-center gap-stack-sm p-inset-squish rounded text-on-surface-variant hover:bg-secondary-container transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-body-dense text-body-dense truncate">jgabbayj@gmail.com</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-stack-sm p-inset-squish rounded text-on-surface-variant hover:bg-secondary-container transition-colors duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-dense text-body-dense">התנתקות</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 mr-64 flex flex-col h-screen overflow-hidden bg-surface relative">
+<!-- App Shell: Top App Bar -->
+<header class="flex justify-between items-center h-16 px-gutter border-b border-outline-variant bg-surface dark:bg-surface-dim shrink-0 z-10 relative">
+<div class="flex items-center gap-stack-sm">
+<nav aria-label="Breadcrumb" class="flex text-on-surface-variant font-body-dense text-body-dense">
+<ol class="inline-flex items-center space-x-1 md:space-x-2 space-x-reverse">
+<li class="inline-flex items-center">
+<a class="hover:text-primary transition-colors" href="#">ייבוא קבצים</a>
+</li>
+<li>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-sm mx-1">chevron_left</span>
+<span class="text-on-surface font-medium">donors-july-2026.pdf</span>
+</div>
+</li>
+</ol>
+</nav>
+</div>
+<div class="flex items-center gap-gutter">
+<div class="relative hidden lg:block w-64">
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-high border-none rounded-full py-1.5 pr-9 pl-4 font-body-dense text-body-dense focus:ring-2 focus:ring-primary focus:bg-surface transition-all" placeholder="חיפוש במסמך..." type="text"/>
+</div>
+<button class="flex items-center justify-center gap-1 bg-primary text-on-primary rounded p-inset-squish font-title-sm text-title-sm hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                    הוספת תורם
+                </button>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<div class="flex-1 overflow-y-auto p-container-margin flex flex-col gap-container-margin pb-24">
+<!-- Page Header -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="font-display-lg text-display-lg text-primary mb-1">בדיקת נתונים שחולצו</h2>
+<p class="font-body-base text-body-base text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-secondary">info</span>
+                        שים לב: הנתונים טרם נשמרו במערכת. יש לאשר אותם כדי לבצע ייבוא.
+                    </p>
+</div>
+<div class="bg-surface-container rounded-lg p-inset-squish flex items-center gap-3 border border-outline-variant">
+<span class="font-label-caps text-label-caps text-on-surface-variant">רמת ביטחון חילוץ:</span>
+<div class="flex items-center gap-2">
+<div class="w-24 h-2 bg-surface-variant rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 92%"></div>
+</div>
+<span class="font-data-mono text-data-mono text-primary font-bold">92%</span>
+</div>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md flex flex-col justify-center">
+<div class="font-display-lg text-display-lg text-on-surface">12</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">רשומות זוהו</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md flex flex-col justify-center border-b-4 border-b-[#10b981]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#10b981] fill">check_circle</span>
+<div class="font-display-lg text-display-lg text-on-surface">9</div>
+</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">תקינות</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-stack-md flex flex-col justify-center border-b-4 border-b-[#f59e0b]">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#f59e0b] fill">warning</span>
+<div class="font-display-lg text-display-lg text-on-surface">2</div>
+</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">דורשות בדיקה</div>
+</div>
+<div class="bg-surface-container-lowest border border-error rounded-lg p-stack-md flex flex-col justify-center border-b-4 border-b-error bg-error-container/10">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error fill">error</span>
+<div class="font-display-lg text-display-lg text-error">1</div>
+</div>
+<div class="font-label-caps text-label-caps text-error">שגיאה</div>
+</div>
+</div>
+<!-- Review Toolbar & Data Table Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg flex flex-col flex-1 overflow-hidden shadow-sm">
+<!-- Toolbar -->
+<div class="p-inset-stretch border-b border-outline-variant flex flex-wrap justify-between items-center gap-4 bg-surface-bright">
+<!-- Filters -->
+<div class="flex bg-surface-container-high rounded-lg p-1 border border-outline-variant/50">
+<button class="px-4 py-1.5 rounded-md font-body-dense text-body-dense bg-surface shadow-sm text-on-surface font-medium">הכול</button>
+<button class="px-4 py-1.5 rounded-md font-body-dense text-body-dense text-on-surface-variant hover:text-on-surface transition-colors">תקינות</button>
+<button class="px-4 py-1.5 rounded-md font-body-dense text-body-dense text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1">דורשות בדיקה <span class="bg-[#f59e0b]/20 text-[#f59e0b] text-[10px] px-1.5 rounded-full">2</span></button>
+<button class="px-4 py-1.5 rounded-md font-body-dense text-body-dense text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1">שגיאות <span class="bg-error-container text-on-error-container text-[10px] px-1.5 rounded-full">1</span></button>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-primary text-primary rounded font-title-sm text-title-sm hover:bg-surface-container transition-colors">
+                            חזרה להעלאה
+                        </button>
+<button class="px-4 py-2 bg-primary text-on-primary rounded font-title-sm text-title-sm hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm flex items-center gap-2">
+                            אישור וייבוא 9 רשומות
+                            <span class="material-symbols-outlined text-sm">arrow_left_alt</span>
+</button>
+</div>
+</div>
+<!-- Editable Data Table -->
+<div class="flex-1 overflow-auto relative">
+<table class="w-full text-right border-collapse">
+<thead class="sticky top-0 bg-surface-container-low z-10 shadow-[0_1px_0_0_#e2e8f0]">
+<tr class="font-label-caps text-label-caps text-on-surface-variant border-b border-outline-variant">
+<th class="p-2 w-10 text-center"><input class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/></th>
+<th class="p-2 w-12 text-center border-l border-outline-variant/30">שורה</th>
+<th class="p-2 min-w-[100px] border-l border-outline-variant/30">מס׳ תורם</th>
+<th class="p-2 min-w-[140px] border-l border-outline-variant/30">עיסוק</th>
+<th class="p-2 min-w-[100px] border-l border-outline-variant/30">מוצא</th>
+<th class="p-2 min-w-[100px] border-l border-outline-variant/30">דת</th>
+<th class="p-2 min-w-[100px] border-l border-outline-variant/30">צבע עור</th>
+<th class="p-2 min-w-[100px] border-l border-outline-variant/30">עיניים</th>
+<th class="p-2 min-w-[100px] border-l border-outline-variant/30">שיער</th>
+<th class="p-2 min-w-[80px] border-l border-outline-variant/30">גובה</th>
+<th class="p-2 min-w-[80px] border-l border-outline-variant/30">משקל</th>
+<th class="p-2 min-w-[90px] border-l border-outline-variant/30">CMV IgG</th>
+<th class="p-2 min-w-[120px]">סטטוס</th>
+</tr>
+</thead>
+<tbody class="font-body-dense text-body-dense text-on-surface bg-surface-container-lowest">
+<!-- Row 1: Valid -->
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<td class="p-2 text-center"><input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/></td>
+<td class="p-2 text-center text-on-surface-variant font-data-mono border-l border-outline-variant/30">1</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 text-data-mono transition-all" type="text" value="D-1029"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all" type="text" value="מהנדס תוכנה"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>אשכנזי</option>
+<option>ספרדי</option>
+<option>מזרחי</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>יהודי</option>
+<option>מוסלמי</option>
+<option>נוצרי</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>בהיר</option>
+<option>שחום</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>חום</option>
+<option>כחול</option>
+<option>ירוק</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>חום</option>
+<option>שחור</option>
+<option>בלונדיני</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 text-data-mono text-center transition-all" type="text" value="1.82"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 text-data-mono text-center transition-all" type="text" value="78"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6 text-center" style="background-position: left 0.5rem center;">
+<option>חיובי</option>
+<option>שלילי</option>
+</select>
+</td>
+<td class="p-2">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#10b981]/10 text-[#059669] font-medium text-[11px]">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                                        תקין
+                                    </span>
+</td>
+</tr>
+<!-- Row 2: Warning/Needs Review (Active) -->
+<tr class="border-b border-outline-variant bg-surface-container shadow-[inset_4px_0_0_0_#f59e0b] relative">
+<td class="p-2 text-center"><input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/></td>
+<td class="p-2 text-center text-on-surface font-data-mono font-bold border-l border-outline-variant/30">2</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 text-data-mono transition-all" type="text" value="D-1030"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30 relative">
+<div class="relative">
+<input class="w-full bg-[#fffbeb] border border-[#f59e0b] text-[#b45309] focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 pr-7 transition-all font-medium" type="text" value="סטודנט?"/>
+<span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-[#f59e0b] text-[16px]">help</span>
+</div>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>אשכנזי</option>
+<option selected="">ספרדי</option>
+<option>מזרחי</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option selected="">יהודי</option>
+<option>מוסלמי</option>
+<option>נוצרי</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>בהיר</option>
+<option selected="">שחום</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option selected="">חום</option>
+<option>כחול</option>
+<option>ירוק</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>חום</option>
+<option selected="">שחור</option>
+<option>בלונדיני</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 text-data-mono text-center transition-all" type="text" value="1.75"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 text-data-mono text-center transition-all" type="text" value="70"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-2 py-1 transition-all pr-6 text-center" style="background-position: left 0.5rem center;">
+<option>חיובי</option>
+<option selected="">שלילי</option>
+</select>
+</td>
+<td class="p-2">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#f59e0b]/10 text-[#d97706] font-medium text-[11px]">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                                        דורש בדיקה
+                                    </span>
+</td>
+</tr>
+<!-- Row 3: Error -->
+<tr class="border-b border-outline-variant hover:bg-surface-container-low transition-colors bg-error-container/5">
+<td class="p-2 text-center"><input checked="" class="rounded border-outline-variant text-primary focus:ring-primary w-4 h-4" type="checkbox"/></td>
+<td class="p-2 text-center text-on-surface-variant font-data-mono border-l border-outline-variant/30">3</td>
+<td class="p-2 border-l border-outline-variant/30">
+<div class="relative">
+<input class="w-full bg-[#fef2f2] border border-error text-error placeholder:text-error/50 focus:border-error focus:ring-1 focus:ring-error rounded px-2 py-1 pr-7 transition-all" placeholder="חסר ערך" type="text" value=""/>
+<span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-error text-[16px]">error</span>
+</div>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<div class="relative">
+<input class="w-full bg-[#fef2f2] border border-error text-error focus:border-error focus:ring-1 focus:ring-error rounded px-2 py-1 pr-7 transition-all font-medium" type="text" value="חסר"/>
+<span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-error text-[16px]">error</span>
+</div>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>אשכנזי</option>
+<option>ספרדי</option>
+<option selected="">מזרחי</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option selected="">יהודי</option>
+<option>מוסלמי</option>
+<option>נוצרי</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option selected="">בהיר</option>
+<option>שחום</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>חום</option>
+<option selected="">כחול</option>
+<option>ירוק</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6" style="background-position: left 0.5rem center;">
+<option>חום</option>
+<option>שחור</option>
+<option selected="">בלונדיני</option>
+</select>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 text-data-mono text-center transition-all" type="text" value="1.88"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<input class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 text-data-mono text-center transition-all" type="text" value="82"/>
+</td>
+<td class="p-2 border-l border-outline-variant/30">
+<select class="w-full bg-transparent border border-transparent hover:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-0.5 transition-all pr-6 text-center" style="background-position: left 0.5rem center;">
+<option selected="">חיובי</option>
+<option>שלילי</option>
+</select>
+</td>
+<td class="p-2">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-medium text-[11px]">
+<span class="material-symbols-outlined text-[14px]">error</span>
+                                        שגיאה
+                                    </span>
+</td>
+</tr>
+<!-- Add some empty padding rows to make it look like a full spreadsheet -->
+<tr class="border-b border-outline-variant/50 h-10">
+<td class="bg-surface-bright" colspan="13"></td>
+</tr>
+<tr class="border-b border-outline-variant/50 h-10">
+<td class="bg-surface-bright" colspan="13"></td>
+</tr>
+<tr class="border-b border-outline-variant/50 h-10">
+<td class="bg-surface-bright" colspan="13"></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Selection Panel (Bottom docked inside card for contextual editing) -->
+<div class="border-t border-outline-variant bg-surface-container p-inset-stretch flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
+<div class="flex flex-col gap-1">
+<h3 class="font-title-sm text-title-sm text-on-surface flex items-center gap-2">
+                            פרטי שורה 2: תיקון נתונים
+                            <span class="bg-surface-variant text-on-surface-variant text-xs px-2 py-0.5 rounded-full font-normal border border-outline-variant">שדה: עיסוק</span>
+</h3>
+<div class="flex items-center gap-6 mt-1 text-sm">
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant">ערך מקורי שחולץ:</span>
+<span class="font-data-mono bg-[#fffbeb] text-[#b45309] px-2 py-0.5 rounded border border-[#fde68a] line-through">סטודנט?</span>
+</div>
+<span class="material-symbols-outlined text-outline text-sm">arrow_left_alt</span>
+<div class="flex items-center gap-2">
+<span class="text-on-surface-variant">הצעה לתיקון:</span>
+<input class="bg-surface-container-lowest border border-primary text-primary focus:ring-2 focus:ring-primary rounded px-2 py-1 font-medium w-48 shadow-[0_0_0_2px_rgba(11,57,124,0.1)]" type="text" value="סטודנט לרפואה"/>
+</div>
+<div class="flex items-center gap-1 bg-[#f0f9ff] text-[#0284c7] px-2 py-1 rounded border border-[#bae6fd]">
+<span class="material-symbols-outlined text-[14px]">psychiatry</span>
+<span class="text-xs font-medium">ביטחון AI: בינונית</span>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 border border-outline text-on-surface-variant rounded font-title-sm text-title-sm hover:bg-surface-variant transition-colors">
+                            התעלם
+                        </button>
+<button class="px-4 py-2 bg-primary text-on-primary rounded font-title-sm text-title-sm hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm">
+                            אישור תיקון
+                        </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Footer (Global Actions) -->
+<div class="absolute bottom-0 left-0 right-0 bg-surface-container-highest border-t border-outline-variant p-inset-stretch flex justify-between items-center z-30 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+<div class="flex items-center gap-4">
+<div class="font-body-base text-body-base text-on-surface">
+<span class="font-bold">נבחרו 2 רשומות מתוך 12</span>
+</div>
+<div class="h-4 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-1 text-error font-body-dense text-body-dense">
+<span class="material-symbols-outlined text-sm">error</span>
+<span>1 רשומות מכילות שגיאות ולא ניתנות לייבוא</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<a class="text-primary hover:text-primary-container underline font-body-base text-body-base transition-colors" href="#">ביטול ייבוא</a>
+<button class="px-6 py-2 bg-primary text-on-primary rounded-lg font-title-sm text-title-sm hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-md flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">save</span>
+                    אישור וייבוא סופי
+                </button>
+</div>
+</div>
+</main>
+</body></html>
