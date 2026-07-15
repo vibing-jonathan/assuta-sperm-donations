@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { getVerifiedAdminEmail } from './admin.js'
+import { getAllowedAdminEmail } from './admin.js'
 
-describe('verified admin authorization', () => {
-  it('accepts a verified allowlisted administrator', () => {
-    expect(getVerifiedAdminEmail({
-      token: { email: 'JGabbayJ@gmail.com', email_verified: true },
+describe('admin authorization', () => {
+  it('accepts an allowlisted administrator without email verification', () => {
+    expect(getAllowedAdminEmail({
+      token: { email: 'JGabbayJ@gmail.com', email_verified: false },
     })).toBe('jgabbayj@gmail.com')
   })
 
-  it('rejects unverified and non-allowlisted accounts', () => {
-    expect(getVerifiedAdminEmail({
-      token: { email: 'robieis153@gmail.com', email_verified: false },
-    })).toBeNull()
-    expect(getVerifiedAdminEmail({
+  it('rejects non-allowlisted accounts', () => {
+    expect(getAllowedAdminEmail({
       token: { email: 'other@example.com', email_verified: true },
     })).toBeNull()
   })

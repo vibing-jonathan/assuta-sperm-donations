@@ -7,7 +7,7 @@ Hebrew administrative and client applications for managing and reviewing sperm d
 - `apps/admin-web` — React and TypeScript administrative web application with Hebrew RTL support.
 - Firebase Authentication — administrator email/password sign-in.
 - Cloud Firestore — donor records and future import metadata.
-- Firestore Security Rules — server-enforced access for approved, verified administrator accounts.
+- Firestore Security Rules — server-enforced access for approved administrator accounts.
 - `apps/mobile` — future React Native client application.
 
 ## Development
@@ -47,7 +47,7 @@ The allowed administrators are:
 - `jgabbayj@gmail.com`
 - `robieis153@gmail.com`
 
-Both accounts must exist in Firebase Authentication and have verified email addresses. Deploy `firestore.rules` before storing donor information.
+Both accounts must exist in Firebase Authentication. Email verification is not required; access is restricted by the exact email allowlist. Deploy `firestore.rules` before storing donor information.
 
 Deploy Firestore rules and indexes:
 

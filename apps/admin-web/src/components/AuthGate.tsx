@@ -1,8 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
   onAuthStateChanged,
-  reload,
-  sendEmailVerification,
   signOut,
   type User,
 } from 'firebase/auth'
@@ -15,7 +13,6 @@ type AuthState =
   | { status: 'loading' | 'signed-out' }
   | { status: 'authorized'; user: User }
   | { status: 'forbidden'; email: string }
-  | { status: 'unverified'; user: User }
   | { status: 'error' }
 
 interface AuthGateProps {
@@ -38,11 +35,6 @@ export function AuthGate({ children }: AuthGateProps) {
           const email = user.email ?? ''
           if (!isAllowedAdmin(email)) {
             setState({ status: 'forbidden', email })
-            return
-          }
-
-          if (!user.emailVerified) {
-            setState({ status: 'unverified', user })
             return
           }
 
@@ -72,10 +64,6 @@ export function AuthGate({ children }: AuthGateProps) {
     )
   }
 
-  if (state.status === 'unverified') {
-    return <UnverifiedEmail user={state.user} />
-  }
-
   if (state.status === 'error') {
     return (
       <SystemMessage
@@ -90,67 +78,6 @@ export function AuthGate({ children }: AuthGateProps) {
   if (state.status !== 'authorized') return null
 
   return children(state.user)
-}
-
-function UnverifiedEmail({ user }: { user: User }) {
-  const [message, setMessage] = useState('יש לאמת את כתובת הדוא״ל לפני הכניסה למערכת.')
-  const [isWorking, setIsWorking] = useState(false)
-
-  async function sendVerification() {
-    setIsWorking(true)
-    try {
-      await sendEmailVerification(user)
-      setMessage('קישור אימות נשלח. לאחר האימות לחצו על ״בדיקה מחדש״.')
-    } catch {
-      setMessage('לא ניתן לשלוח קישור כרגע. נסו שוב מאוחר יותר.')
-    } finally {
-      setIsWorking(false)
-    }
-  }
-
-  async function checkAgain() {
-    setIsWorking(true)
-    try {
-      await reload(user)
-      if (user.emailVerified) {
-        window.location.reload()
-      } else {
-        setMessage('הכתובת עדיין אינה מאומתת.')
-      }
-    } finally {
-      setIsWorking(false)
-    }
-  }
-
-  return (
-    <main className="auth-shell" dir="rtl" aria-live="polite">
-      <section className="auth-card">
-        <h1>נדרש אימות דוא״ל</h1>
-        <p className="auth-description">{message}</p>
-        <div className="message-actions">
-          <button
-            className="primary-button"
-            type="button"
-            disabled={isWorking}
-            onClick={() => void sendVerification()}
-          >
-            שליחת קישור אימות
-          </button>
-          <button
-            className="secondary-button"
-            type="button"
-            disabled={isWorking}
-            onClick={() => void checkAgain()}
-          >
-            בדיקה מחדש
-          </button>
-          <button className="text-button" type="button" onClick={() => void signOut(auth)}>
-            יציאה
-          </button>
-        </div>
-      </section>
-    </main>
-  )
 }
 
 interface SystemMessageProps {

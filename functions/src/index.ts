@@ -5,7 +5,7 @@ import { logger } from 'firebase-functions'
 import { defineSecret } from 'firebase-functions/params'
 import { onRequest } from 'firebase-functions/v2/https'
 
-import { getVerifiedAdminEmail } from './admin.js'
+import { getAllowedAdminEmail } from './admin.js'
 import { extractionJsonSchema, parseExtractionResponse } from './extractionSchema.js'
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY')
@@ -85,7 +85,7 @@ export const extractDonorsFromPdf = onRequest({
     return
   }
 
-  const adminEmail = getVerifiedAdminEmail({ token: decodedToken })
+  const adminEmail = getAllowedAdminEmail({ token: decodedToken })
   if (!adminEmail) {
     response.status(403).json({ error: 'Verified administrator access is required.' })
     return

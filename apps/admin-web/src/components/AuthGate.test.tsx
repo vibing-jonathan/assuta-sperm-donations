@@ -15,8 +15,6 @@ vi.mock('firebase/auth', () => ({
     onUser(authState.user)
     return vi.fn()
   },
-  reload: vi.fn(),
-  sendEmailVerification: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signOut: vi.fn(),
 }))
@@ -34,7 +32,7 @@ describe('AuthGate', () => {
     expect(screen.getByRole('heading', { name: 'ברוכים הבאים' })).toBeInTheDocument()
   })
 
-  it('allows an approved administrator with a verified email', () => {
+  it('allows an approved administrator', () => {
     authState.user = { email: 'jgabbayj@gmail.com', emailVerified: true }
 
     render(<AuthGate>{(user) => <p>{user.email}</p>}</AuthGate>)
@@ -42,13 +40,12 @@ describe('AuthGate', () => {
     expect(screen.getByText('jgabbayj@gmail.com')).toBeInTheDocument()
   })
 
-  it('requires email verification for an approved administrator', () => {
+  it('allows an approved administrator without email verification', () => {
     authState.user = { email: 'robieis153@gmail.com', emailVerified: false }
 
-    render(<AuthGate>{() => <p>private</p>}</AuthGate>)
+    render(<AuthGate>{(user) => <p>{user.email}</p>}</AuthGate>)
 
-    expect(screen.getByRole('heading', { name: 'נדרש אימות דוא״ל' })).toBeInTheDocument()
-    expect(screen.queryByText('private')).not.toBeInTheDocument()
+    expect(screen.getByText('robieis153@gmail.com')).toBeInTheDocument()
   })
 
   it('blocks every account outside the allowlist', () => {
