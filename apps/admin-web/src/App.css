@@ -669,6 +669,49 @@ tbody tr:last-child td {
   color: #386c66;
 }
 
+.range-result .primary-button {
+  margin-top: 0.65rem;
+  justify-self: start;
+}
+
+.extraction-preview {
+  margin-top: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.extraction-preview-header {
+  padding: 1.25rem 1.4rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.extraction-preview-header h2,
+.extraction-preview-header p {
+  margin: 0.2rem 0 0;
+}
+
+.extraction-preview-header small {
+  color: var(--muted);
+}
+
+.extraction-warnings {
+  margin: 1rem 1.4rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid #f2d492;
+  border-radius: 0.75rem;
+  background: #fff9e9;
+}
+
+.extraction-warnings ul {
+  margin: 0.4rem 1.2rem 0 0;
+}
+
 .selected-file-panel .inline-alert {
   margin-top: 1rem;
 }

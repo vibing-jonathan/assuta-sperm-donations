@@ -57,6 +57,7 @@ GoogleService-Info.plist
 .parcel-cache/
 .turbo/
 dist/
+/functions/lib/
 
 # IDEs and editors
 .idea/

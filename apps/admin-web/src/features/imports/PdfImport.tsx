@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 
+import { extractDonors, type ExtractionResult } from './extractDonors'
 import { MAX_PDF_BYTES, scanDonorPdf, type PdfScanResult } from './scanDonorPdf'
 
 export function PdfImport() {
@@ -9,10 +10,13 @@ export function PdfImport() {
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [isScanning, setIsScanning] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
+  const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
 
   async function inspectFile(nextFile: File) {
     setFile(nextFile)
     setResult(null)
+    setExtraction(null)
     setError(null)
     setIsScanning(true)
     try {
@@ -42,8 +46,23 @@ export function PdfImport() {
   function clearFile() {
     setFile(null)
     setResult(null)
+    setExtraction(null)
     setError(null)
     if (inputRef.current) inputRef.current.value = ''
+  }
+
+  async function runExtraction() {
+    if (!file || !result) return
+    setIsExtracting(true)
+    setExtraction(null)
+    setError(null)
+    try {
+      setExtraction(await extractDonors(file, result))
+    } catch {
+      setError('חילוץ הנתונים נכשל. בדקו את החיבור ונסו שוב.')
+    } finally {
+      setIsExtracting(false)
+    }
   }
 
   return (
@@ -100,6 +119,9 @@ export function PdfImport() {
                   <strong>עמודי הטבלה אותרו</strong>
                   <span>עמודים {result.startPage}–{result.endPage}</span>
                   <small>{result.pageCount} עמודים מתוך {result.totalPages} יועברו לחילוץ</small>
+                  <button className="primary-button" type="button" disabled={isExtracting} onClick={() => void runExtraction()}>
+                    {isExtracting ? 'מחלץ נתונים…' : 'חילוץ נתונים עם Gemini'}
+                  </button>
                 </div>
               )}
               {error && <p className="inline-alert" role="alert">{error}</p>}
@@ -107,6 +129,39 @@ export function PdfImport() {
           ) : <p className="no-file">לא נבחר קובץ.</p>}
         </div>
       </section>
+
+      {extraction && (
+        <section className="extraction-preview" aria-labelledby="extraction-title">
+          <div className="extraction-preview-header">
+            <div>
+              <p className="workspace-kicker">תצוגה מקדימה</p>
+              <h2 id="extraction-title">נמצאו {extraction.donors.length} תורמים</h2>
+              <p>הנתונים עדיין לא נשמרו. יש לעבור על הרשומות לפני הייבוא.</p>
+            </div>
+            <small dir="ltr">{extraction.model}</small>
+          </div>
+          {extraction.warnings.length > 0 && (
+            <div className="extraction-warnings" role="status">
+              <strong>נקודות לבדיקה</strong>
+              <ul>{extraction.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+            </div>
+          )}
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>מס׳ תורם</th><th>עיסוק</th><th>מוצא</th><th>דת</th><th>צבע עור</th><th>עיניים</th><th>שיער</th><th>גובה</th><th>משקל</th><th>CMV IgG</th></tr></thead>
+              <tbody>
+                {extraction.donors.map((donor, index) => (
+                  <tr key={`${donor.donorNumber}-${index}`}>
+                    <th scope="row">{donor.donorNumber}</th><td>{donor.occupation || '—'}</td><td>{donor.origin || '—'}</td>
+                    <td>{donor.religion || '—'}</td><td>{donor.skinColor || '—'}</td><td>{donor.eyeColor || '—'}</td>
+                    <td>{donor.hairColor || '—'}</td><td>{donor.heightMeters ?? '—'}</td><td>{donor.weightKg ?? '—'}</td><td>{donor.cmvIgg || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

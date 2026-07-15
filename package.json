@@ -9,8 +9,11 @@
     "dev:admin": "npm --workspace @sdc/admin-web run dev",
     "build:admin": "npm --workspace @sdc/admin-web run build",
     "firebase:deploy:firestore": "firebase deploy --only firestore",
+    "firebase:deploy:functions": "firebase deploy --only functions",
     "firebase:emulators": "firebase emulators:start --only firestore",
     "firebase:version": "firebase --version",
+    "build:functions": "npm --prefix functions run build",
+    "test:functions": "npm --prefix functions run test",
     "lint:admin": "npm --workspace @sdc/admin-web run lint",
     "test:admin": "npm --workspace @sdc/admin-web run test"
   },
