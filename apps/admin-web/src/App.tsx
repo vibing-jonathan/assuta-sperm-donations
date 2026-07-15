@@ -1,7 +1,9 @@
+import { signOut } from 'firebase/auth'
+
 import './App.css'
 
 import { AuthGate } from './components/AuthGate'
-import { supabase } from './lib/supabase'
+import { auth } from './lib/firebase'
 
 interface AdminDashboardProps {
   email: string
@@ -29,8 +31,8 @@ export function AdminDashboard({ email, onSignOut }: AdminDashboardProps) {
       <section className="status-card" aria-labelledby="foundation-title">
         <div>
           <p className="status-label">מצב המערכת</p>
-          <h2 id="foundation-title">האימות פעיל</h2>
-          <p>ניהול תורמים וייבוא קובצי PDF יתווספו בשלבים הבאים.</p>
+          <h2 id="foundation-title">Firebase מחובר</h2>
+          <p>האימות ו-Firestore מוכנים. ניהול התורמים יתווסף בשלב הבא.</p>
         </div>
         <span className="status-badge">מנהל מורשה</span>
       </section>
@@ -41,13 +43,8 @@ export function AdminDashboard({ email, onSignOut }: AdminDashboardProps) {
 function App() {
   return (
     <AuthGate>
-      {(principal) => (
-        <AdminDashboard
-          email={principal.email}
-          onSignOut={async () => {
-            await supabase?.auth.signOut()
-          }}
-        />
+      {(user) => (
+        <AdminDashboard email={user.email ?? ''} onSignOut={() => signOut(auth)} />
       )}
     </AuthGate>
   )

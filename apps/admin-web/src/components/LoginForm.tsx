@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { FirebaseError } from 'firebase/app'
+import { signInWithEmailAndPassword, type Auth } from 'firebase/auth'
 
 interface LoginFormProps {
-  client: SupabaseClient
+  auth: Auth
 }
 
-export function LoginForm({ client }: LoginFormProps) {
+export function LoginForm({ auth }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -16,13 +17,15 @@ export function LoginForm({ client }: LoginFormProps) {
     setError(null)
     setIsSubmitting(true)
 
-    const { error: signInError } = await client.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
-
-    if (signInError) {
-      setError('פרטי ההתחברות שגויים או שהחשבון אינו זמין.')
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password)
+    } catch (signInError) {
+      setError(
+        signInError instanceof FirebaseError
+          ? 'פרטי ההתחברות שגויים או שהחשבון אינו זמין.'
+          : 'לא ניתן להתחבר כרגע. נסו שוב מאוחר יותר.',
+      )
+    } finally {
       setIsSubmitting(false)
     }
   }
@@ -32,7 +35,7 @@ export function LoginForm({ client }: LoginFormProps) {
       <section className="auth-card" aria-labelledby="login-title">
         <p className="app-eyebrow">כניסת מנהלים</p>
         <h1 id="login-title">ברוכים הבאים</h1>
-        <p className="auth-description">התחברו באמצעות חשבון מנהל מורשה.</p>
+        <p className="auth-description">התחברו באמצעות חשבון Firebase מורשה.</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>

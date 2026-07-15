@@ -1,25 +1,14 @@
 # Sperm Donation Candidates
 
-Administrative and client applications for managing and reviewing sperm donor candidates.
+Hebrew administrative and client applications for managing and reviewing sperm donor candidates.
 
-## Repository status
+## Architecture
 
-The project is being built as a monorepo:
-
-- `apps/admin-web` — Hebrew, RTL administrative web application.
+- `apps/admin-web` — React and TypeScript administrative web application with Hebrew RTL support.
+- Firebase Authentication — administrator email/password sign-in.
+- Cloud Firestore — donor records and future import metadata.
+- Firestore Security Rules — server-enforced access for approved, verified administrator accounts.
 - `apps/mobile` — future React Native client application.
-- `services/api` — FastAPI application and protected integrations.
-- `supabase` — database migrations and local Supabase configuration.
-
-## Local secrets
-
-Copy future `.env.example` files to `.env` and fill in values locally. Environment files are ignored by Git. Never commit Supabase database credentials, Supabase secret keys, Gemini API keys, or Google API keys.
-
-## Google Stitch MCP
-
-The repository configures Stitch in `.codex/config.toml` without storing its API key. Set a fresh `STITCH_API_KEY` in the environment that launches Codex, then restart Codex so the MCP server is loaded.
-
-The key must be supplied through the `X-Goog-Api-Key` header. Do not put the key directly in `.codex/config.toml`.
 
 ## Development
 
@@ -27,25 +16,37 @@ Install dependencies:
 
 ```powershell
 npm.cmd install
-uv sync --directory services/api --all-groups
 ```
 
-Run the Hebrew admin web app:
+Run the admin web app:
 
 ```powershell
 npm.cmd run dev:admin
 ```
 
-Run the FastAPI service:
+Verify the project:
 
 ```powershell
-uv run --directory services/api uvicorn app.main:app --reload
+npm.cmd run lint:admin
+npm.cmd run test:admin
+npm.cmd run build:admin
 ```
 
-The API health endpoint is `http://localhost:8000/api/health`, and its local OpenAPI UI is available at `http://localhost:8000/api/docs`.
+## Firebase
 
-## Administrator authentication
+The public Firebase web configuration is stored in `apps/admin-web/src/lib/firebase.ts`. Firebase web API keys identify the application; authorization is enforced by Firebase Authentication and `firestore.rules`.
 
-The admin web app signs existing users in through Supabase Auth. FastAPI validates every presented access token against Supabase Auth and independently permits only the configured `ALLOWED_ADMIN_EMAILS` values. Browser-side checks improve the experience but are never the security boundary.
+The allowed administrators are:
 
-Create or invite the two approved users in Supabase Auth before signing in. Public self-registration is not exposed by this application.
+- `jgabbayj@gmail.com`
+- `robieis153@gmail.com`
+
+Both accounts must exist in Firebase Authentication and have verified email addresses. Deploy `firestore.rules` before storing donor information.
+
+## Google Stitch MCP
+
+The repository configures Stitch in `.codex/config.toml` without storing its API key. `STITCH_API_KEY` must be present in the operating-system environment that launches Codex; a project `.env` file is not automatically loaded by the MCP host. Restart Codex after setting it.
+
+## Sensitive local files
+
+The local `.env`, donor PDF sources, uploads, and private files are excluded from Git. The Gemini key must never be exposed through a `VITE_` variable or browser code; the future PDF extraction flow will use a protected Firebase backend and Secret Manager.

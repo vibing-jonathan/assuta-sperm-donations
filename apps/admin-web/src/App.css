@@ -160,9 +160,19 @@
 }
 
 .secondary-button {
-  margin-top: 1.5rem;
   background: #eaf2ff;
   color: #174d91;
+}
+
+.auth-card > .secondary-button {
+  margin-top: 1.5rem;
+}
+
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 .text-button {

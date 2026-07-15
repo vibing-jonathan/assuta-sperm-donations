@@ -1,106 +1,64 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import {
+  onAuthStateChanged,
+  reload,
+  sendEmailVerification,
+  signOut,
+  type User,
+} from 'firebase/auth'
 
 import { isAllowedAdmin } from '../config/admin'
-import { ApiError, type AdminPrincipal, verifyAdminAccess } from '../lib/api'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { auth } from '../lib/firebase'
 import { LoginForm } from './LoginForm'
 
 type AuthState =
-  | { status: 'loading' | 'signed-out' | 'checking' | 'configuration-error' }
-  | { status: 'authorized'; principal: AdminPrincipal }
+  | { status: 'loading' | 'signed-out' }
+  | { status: 'authorized'; user: User }
   | { status: 'forbidden'; email: string }
-  | { status: 'error'; message: string }
+  | { status: 'unverified'; user: User }
+  | { status: 'error' }
 
 interface AuthGateProps {
-  children: (principal: AdminPrincipal) => ReactNode
+  children: (user: User) => ReactNode
 }
 
 export function AuthGate({ children }: AuthGateProps) {
   const [state, setState] = useState<AuthState>({ status: 'loading' })
 
-  useEffect(() => {
-    if (!supabase || !isSupabaseConfigured) {
-      setState({ status: 'configuration-error' })
-      return
-    }
+  useEffect(
+    () =>
+      onAuthStateChanged(
+        auth,
+        (user) => {
+          if (!user) {
+            setState({ status: 'signed-out' })
+            return
+          }
 
-    let validationId = 0
-    let disposed = false
-    let controller: AbortController | null = null
+          const email = user.email ?? ''
+          if (!isAllowedAdmin(email)) {
+            setState({ status: 'forbidden', email })
+            return
+          }
 
-    async function validateSession(session: Session | null) {
-      const currentValidationId = ++validationId
-      controller?.abort()
-      controller = new AbortController()
+          if (!user.emailVerified) {
+            setState({ status: 'unverified', user })
+            return
+          }
 
-      if (!session) {
-        setState({ status: 'signed-out' })
-        return
-      }
+          setState({ status: 'authorized', user })
+        },
+        () => setState({ status: 'error' }),
+      ),
+    [],
+  )
 
-      const email = session.user.email ?? ''
-      if (!isAllowedAdmin(email)) {
-        setState({ status: 'forbidden', email })
-        return
-      }
-
-      setState({ status: 'checking' })
-      try {
-        const principal = await verifyAdminAccess(session.access_token, controller.signal)
-        if (!disposed && currentValidationId === validationId) {
-          setState({ status: 'authorized', principal })
-        }
-      } catch (error) {
-        if (disposed || currentValidationId !== validationId) return
-        if (error instanceof DOMException && error.name === 'AbortError') return
-
-        if (error instanceof ApiError && error.status === 403) {
-          setState({ status: 'forbidden', email })
-          return
-        }
-        setState({
-          status: 'error',
-          message: 'לא ניתן לאמת את ההרשאה כרגע. ודאו ששירות ה-API פועל ונסו שוב.',
-        })
-      }
-    }
-
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      queueMicrotask(() => void validateSession(session))
-    })
-
-    return () => {
-      disposed = true
-      controller?.abort()
-      data.subscription.unsubscribe()
-    }
-  }, [])
-
-  async function signOut() {
-    await supabase?.auth.signOut()
-  }
-
-  if (state.status === 'configuration-error') {
-    return (
-      <SystemMessage
-        title="החיבור ל-Supabase אינו מוגדר"
-        description="חסרים כתובת הפרויקט או המפתח הציבורי בסביבת ההרצה."
-      />
-    )
-  }
-
-  if (state.status === 'loading' || state.status === 'checking') {
-    return (
-      <SystemMessage
-        title="מאמתים הרשאה…"
-        description="המערכת בודקת את חשבון המנהל."
-      />
-    )
+  if (state.status === 'loading') {
+    return <SystemMessage title="מאמתים הרשאה…" description="המערכת בודקת את חשבון המנהל." />
   }
 
   if (state.status === 'signed-out') {
-    return supabase ? <LoginForm client={supabase} /> : null
+    return <LoginForm auth={auth} />
   }
 
   if (state.status === 'forbidden') {
@@ -109,25 +67,90 @@ export function AuthGate({ children }: AuthGateProps) {
         title="אין הרשאת מנהל לחשבון זה"
         description={state.email || 'החשבון המחובר אינו מורשה לגשת למערכת.'}
         actionLabel="יציאה"
-        onAction={signOut}
+        onAction={() => signOut(auth)}
       />
     )
+  }
+
+  if (state.status === 'unverified') {
+    return <UnverifiedEmail user={state.user} />
   }
 
   if (state.status === 'error') {
     return (
       <SystemMessage
         title="שגיאה באימות"
-        description={state.message}
-        actionLabel="יציאה וכניסה מחדש"
-        onAction={signOut}
+        description="לא ניתן לאמת את ההרשאה כרגע. נסו להיכנס מחדש."
+        actionLabel="יציאה"
+        onAction={() => signOut(auth)}
       />
     )
   }
 
   if (state.status !== 'authorized') return null
 
-  return children(state.principal)
+  return children(state.user)
+}
+
+function UnverifiedEmail({ user }: { user: User }) {
+  const [message, setMessage] = useState('יש לאמת את כתובת הדוא״ל לפני הכניסה למערכת.')
+  const [isWorking, setIsWorking] = useState(false)
+
+  async function sendVerification() {
+    setIsWorking(true)
+    try {
+      await sendEmailVerification(user)
+      setMessage('קישור אימות נשלח. לאחר האימות לחצו על ״בדיקה מחדש״.')
+    } catch {
+      setMessage('לא ניתן לשלוח קישור כרגע. נסו שוב מאוחר יותר.')
+    } finally {
+      setIsWorking(false)
+    }
+  }
+
+  async function checkAgain() {
+    setIsWorking(true)
+    try {
+      await reload(user)
+      if (user.emailVerified) {
+        window.location.reload()
+      } else {
+        setMessage('הכתובת עדיין אינה מאומתת.')
+      }
+    } finally {
+      setIsWorking(false)
+    }
+  }
+
+  return (
+    <main className="auth-shell" dir="rtl" aria-live="polite">
+      <section className="auth-card">
+        <h1>נדרש אימות דוא״ל</h1>
+        <p className="auth-description">{message}</p>
+        <div className="message-actions">
+          <button
+            className="primary-button"
+            type="button"
+            disabled={isWorking}
+            onClick={() => void sendVerification()}
+          >
+            שליחת קישור אימות
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={isWorking}
+            onClick={() => void checkAgain()}
+          >
+            בדיקה מחדש
+          </button>
+          <button className="text-button" type="button" onClick={() => void signOut(auth)}>
+            יציאה
+          </button>
+        </div>
+      </section>
+    </main>
+  )
 }
 
 interface SystemMessageProps {
