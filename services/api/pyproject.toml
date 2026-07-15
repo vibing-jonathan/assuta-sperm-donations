@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.139.0",
+    "httpx>=0.28.1",
     "pydantic-settings>=2.14.2",
     "uvicorn[standard]>=0.51.0",
 ]
@@ -23,7 +24,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28.1",
+    "httpx2>=2.7.0",
     "pytest>=9.1.1",
     "ruff>=0.15.21",
 ]

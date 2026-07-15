@@ -4,6 +4,16 @@
   padding: 4rem 0;
 }
 
+.account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 3rem;
+  color: #526070;
+  font-size: 0.875rem;
+}
+
 .app-header {
   margin-bottom: 2rem;
 }
@@ -60,6 +70,112 @@
   color: #174d91;
   font-size: 0.875rem;
   font-weight: 700;
+}
+
+.auth-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1rem;
+}
+
+.auth-card {
+  width: min(100%, 28rem);
+  padding: 2rem;
+  border: 1px solid #d9e2ef;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 20px 48px rgb(8 39 95 / 10%);
+}
+
+.auth-card h1 {
+  margin: 0;
+  color: #08275f;
+  font-size: 2rem;
+}
+
+.auth-description {
+  margin: 0.75rem 0 0;
+  color: #657083;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 0.5rem;
+  color: #263247;
+  font-weight: 700;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #bac7d8;
+  border-radius: 0.625rem;
+  background: #fff;
+  color: #172033;
+  direction: ltr;
+  text-align: left;
+}
+
+.auth-form input:focus-visible {
+  border-color: #2764ac;
+  outline: 3px solid rgb(39 100 172 / 18%);
+}
+
+.auth-error {
+  margin: 0;
+  color: #a52222;
+  font-size: 0.9rem;
+}
+
+.primary-button,
+.secondary-button,
+.text-button {
+  border: 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.625rem;
+}
+
+.primary-button {
+  background: #0b397c;
+  color: #fff;
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.secondary-button {
+  margin-top: 1.5rem;
+  background: #eaf2ff;
+  color: #174d91;
+}
+
+.text-button {
+  padding: 0.25rem;
+  background: transparent;
+  color: #174d91;
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.text-button:focus-visible {
+  outline: 3px solid rgb(39 100 172 / 30%);
+  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {

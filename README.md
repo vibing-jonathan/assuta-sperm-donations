@@ -43,3 +43,9 @@ uv run --directory services/api uvicorn app.main:app --reload
 ```
 
 The API health endpoint is `http://localhost:8000/api/health`, and its local OpenAPI UI is available at `http://localhost:8000/api/docs`.
+
+## Administrator authentication
+
+The admin web app signs existing users in through Supabase Auth. FastAPI validates every presented access token against Supabase Auth and independently permits only the configured `ALLOWED_ADMIN_EMAILS` values. Browser-side checks improve the experience but are never the security boundary.
+
+Create or invite the two approved users in Supabase Auth before signing in. Public self-registration is not exposed by this application.

@@ -19,10 +19,21 @@ class Settings(BaseSettings):
     app_environment: str = "development"
     api_prefix: str = "/api"
     cors_origins: str = "http://localhost:5173"
+    supabase_project_url: str = ""
+    supabase_publishable_key: str = ""
+    allowed_admin_emails: str = "jgabbayj@gmail.com,robieis153@gmail.com"
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def allowed_admin_email_set(self) -> frozenset[str]:
+        return frozenset(
+            email.strip().casefold()
+            for email in self.allowed_admin_emails.split(",")
+            if email.strip()
+        )
 
 
 @lru_cache
