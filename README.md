@@ -18,6 +18,12 @@ Install dependencies:
 npm.cmd install
 ```
 
+Firebase CLI is installed with the project. Verify it with:
+
+```powershell
+npm.cmd run firebase:version
+```
+
 Run the admin web app:
 
 ```powershell
@@ -42,6 +48,12 @@ The allowed administrators are:
 - `robieis153@gmail.com`
 
 Both accounts must exist in Firebase Authentication and have verified email addresses. Deploy `firestore.rules` before storing donor information.
+
+Deploy Firestore rules and indexes:
+
+```powershell
+npm.cmd run firebase:deploy:firestore
+```
 
 ## Google Stitch MCP
 

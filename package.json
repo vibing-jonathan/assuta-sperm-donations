@@ -8,7 +8,13 @@
   "scripts": {
     "dev:admin": "npm --workspace @sdc/admin-web run dev",
     "build:admin": "npm --workspace @sdc/admin-web run build",
+    "firebase:deploy:firestore": "firebase deploy --only firestore",
+    "firebase:emulators": "firebase emulators:start --only firestore",
+    "firebase:version": "firebase --version",
     "lint:admin": "npm --workspace @sdc/admin-web run lint",
     "test:admin": "npm --workspace @sdc/admin-web run test"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.23.0"
   }
 }
