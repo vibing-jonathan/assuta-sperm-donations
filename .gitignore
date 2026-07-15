@@ -80,6 +80,7 @@ tmp/
 temp/
 *.tmp
 *.bak
+.firebase/
 
 # Sensitive donor source documents and local uploads
 /catalog.pdf
