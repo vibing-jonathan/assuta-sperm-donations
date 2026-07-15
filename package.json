@@ -1,0 +1,14 @@
+{
+  "name": "sperm-donation-candidates",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:admin": "npm --workspace @sdc/admin-web run dev",
+    "build:admin": "npm --workspace @sdc/admin-web run build",
+    "lint:admin": "npm --workspace @sdc/admin-web run lint",
+    "test:admin": "npm --workspace @sdc/admin-web run test"
+  }
+}

@@ -21,3 +21,25 @@ The repository configures Stitch in `.codex/config.toml` without storing its API
 
 The key must be supplied through the `X-Goog-Api-Key` header. Do not put the key directly in `.codex/config.toml`.
 
+## Development
+
+Install dependencies:
+
+```powershell
+npm.cmd install
+uv sync --directory services/api --all-groups
+```
+
+Run the Hebrew admin web app:
+
+```powershell
+npm.cmd run dev:admin
+```
+
+Run the FastAPI service:
+
+```powershell
+uv run --directory services/api uvicorn app.main:app --reload
+```
+
+The API health endpoint is `http://localhost:8000/api/health`, and its local OpenAPI UI is available at `http://localhost:8000/api/docs`.
