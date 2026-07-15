@@ -11,8 +11,50 @@ service cloud.firestore {
         ];
     }
 
+    function hasValidDonorSchema() {
+      return request.resource.data.keys().hasOnly([
+          'donorNumber', 'occupation', 'origin', 'religion', 'skinColor',
+          'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'donorNumber', 'occupation', 'origin', 'religion', 'skinColor',
+          'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.donorNumber is string
+        && request.resource.data.donorNumber.size() > 0
+        && request.resource.data.occupation is string
+        && request.resource.data.origin is string
+        && request.resource.data.religion is string
+        && request.resource.data.skinColor is string
+        && request.resource.data.eyeColor is string
+        && request.resource.data.hairColor is string
+        && request.resource.data.cmvIgg is string
+        && (request.resource.data.heightMeters == null
+          || (request.resource.data.heightMeters is number
+            && request.resource.data.heightMeters >= 1
+            && request.resource.data.heightMeters <= 2.5))
+        && (request.resource.data.weightKg == null
+          || (request.resource.data.weightKg is number
+            && request.resource.data.weightKg >= 30
+            && request.resource.data.weightKg <= 300));
+    }
+
     match /donors/{donorId} {
-      allow read, create, update, delete: if isAdmin();
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+        && hasValidDonorSchema()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.updatedBy == request.auth.token.email;
+      allow update: if isAdmin()
+        && hasValidDonorSchema()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.token.email;
     }
 
     match /{document=**} {

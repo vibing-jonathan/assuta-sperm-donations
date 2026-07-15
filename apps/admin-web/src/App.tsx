@@ -3,14 +3,17 @@ import { signOut } from 'firebase/auth'
 import './App.css'
 
 import { AuthGate } from './components/AuthGate'
+import { DonorManagement } from './features/donors/DonorManagement'
+import type { DonorRepository } from './features/donors/donorRepository'
 import { auth } from './lib/firebase'
 
 interface AdminDashboardProps {
   email: string
   onSignOut: () => void | Promise<void>
+  donorRepository?: DonorRepository
 }
 
-export function AdminDashboard({ email, onSignOut }: AdminDashboardProps) {
+export function AdminDashboard({ email, onSignOut, donorRepository }: AdminDashboardProps) {
   return (
     <main className="app-shell" dir="rtl">
       <nav className="account-bar" aria-label="חשבון מנהל">
@@ -31,11 +34,13 @@ export function AdminDashboard({ email, onSignOut }: AdminDashboardProps) {
       <section className="status-card" aria-labelledby="foundation-title">
         <div>
           <p className="status-label">מצב המערכת</p>
-          <h2 id="foundation-title">Firebase מחובר</h2>
-          <p>האימות ו-Firestore מוכנים. ניהול התורמים יתווסף בשלב הבא.</p>
+          <h2 id="foundation-title">סביבת ניהול מאובטחת</h2>
+          <p>הנתונים נשמרים ב-Firestore וזמינים למנהלים מורשים בלבד.</p>
         </div>
         <span className="status-badge">מנהל מורשה</span>
       </section>
+
+      <DonorManagement adminEmail={email} repository={donorRepository} />
     </main>
   )
 }
