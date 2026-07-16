@@ -1,5 +1,6 @@
 import { getDatabase } from '../../lib/firebase'
 import { donorNumberClaimId, normalizeDonorNumber, type DonorInput } from '../donors/donor'
+import type { DeterministicFallbackReason } from './deterministicExtraction'
 
 export const MAX_DONORS_PER_IMPORT = 249
 
@@ -9,6 +10,10 @@ export interface ImportAuditContext {
   endPage: number
   pageCount: number
   model: string
+  extractionMethod: 'deterministic' | 'gemini-fallback'
+  parserVersion: string
+  extractionDurationMs: number
+  fallbackReason: DeterministicFallbackReason | null
   adminEmail: string
   warnings: string[]
 }
@@ -111,7 +116,11 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         detectedStartPage: input.startPage,
         detectedEndPage: input.endPage,
         detectedPageCount: input.pageCount,
-        geminiModel: input.model,
+        geminiModel: input.extractionMethod === 'gemini-fallback' ? input.model : null,
+        extractionMethod: input.extractionMethod,
+        parserVersion: input.parserVersion,
+        extractionDurationMs: input.extractionDurationMs,
+        fallbackReason: input.fallbackReason,
         importedBy: input.adminEmail,
         importedAt: timestamp,
         approvedCount: input.donors.length,
@@ -138,7 +147,11 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         detectedStartPage: input.startPage,
         detectedEndPage: input.endPage,
         detectedPageCount: input.pageCount,
-        geminiModel: input.model,
+        geminiModel: input.extractionMethod === 'gemini-fallback' ? input.model : null,
+        extractionMethod: input.extractionMethod,
+        parserVersion: input.parserVersion,
+        extractionDurationMs: input.extractionDurationMs,
+        fallbackReason: input.fallbackReason,
         importedBy: input.adminEmail,
         importedAt: store.timestamp(),
         approvedCount: input.donors.length,

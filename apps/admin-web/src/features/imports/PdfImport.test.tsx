@@ -3,11 +3,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { DonorInput } from '../donors/donor'
 import type { ImportRepository } from './importRepository'
-import type { ExtractionResult } from './extractDonors'
+import type { ExtractionResult, HybridExtractionOptions } from './extractDonors'
 import { PdfImport } from './PdfImport'
 import type { PdfScanResult } from './scanDonorPdf'
 
 const scanResult = { startPage: 2, endPage: 4, pageCount: 3, totalPages: 8, scannedPages: 5 }
+const deterministicMetadata = {
+  model: 'donor-table-v1', extractionMethod: 'deterministic' as const,
+  parserVersion: 'donor-table-v1', extractionDurationMs: 320, fallbackReason: null,
+}
+const fallbackMetadata = {
+  model: 'gemini-test', extractionMethod: 'gemini-fallback' as const,
+  parserVersion: 'donor-table-v1', extractionDurationMs: 1450,
+  fallbackReason: 'columns_ambiguous' as const,
+}
 const validDonor = (donorNumber: string, overrides: Partial<DonorInput> = {}): DonorInput => ({
   donorNumber, occupation: 'רופא', origin: 'ספרדי', religion: 'יהודי', skinColor: 'בהיר',
   eyeColor: 'חום', hairColor: 'שחור', heightMeters: 1.8, weightKg: 75, cmvIgg: 'שלילי',
@@ -49,10 +58,10 @@ describe('PDF import approval workflow', () => {
 
     upload(container)
     await act(async () => { await Promise.resolve() })
-    fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים עם Gemini' }))
+    fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
     await act(async () => { await Promise.resolve() })
-    expect(screen.getByRole('heading', { name: 'Gemini מחלץ את נתוני התורמים' })).toBeInTheDocument()
-    expect(screen.getByText(/יש להשאיר את העמוד פתוח ולא להחליף/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'קורא את טבלת התורמים באופן מקומי' })).toBeInTheDocument()
+    expect(screen.getByText(/יש להשאיר את העמוד פתוח עד לסיום/)).toBeInTheDocument()
     expect(activeChanged).toHaveBeenCalledWith(true)
 
     act(() => { vi.advanceTimersByTime(2100) })
@@ -60,6 +69,30 @@ describe('PDF import approval workflow', () => {
     const beforeUnload = new Event('beforeunload', { cancelable: true })
     window.dispatchEvent(beforeUnload)
     expect(beforeUnload.defaultPrevented).toBe(true)
+  })
+
+  it('announces when structural confidence triggers the slower Gemini fallback', async () => {
+    const extractPdf = vi.fn((
+      _file: File,
+      _range: PdfScanResult,
+      options?: HybridExtractionOptions,
+    ): Promise<ExtractionResult> => {
+      options?.onFallback?.('columns_ambiguous')
+      return new Promise(() => undefined)
+    })
+    const { container } = render(
+      <PdfImport
+        adminEmail="jgabbayj@gmail.com"
+        repository={repository()}
+        scanPdf={vi.fn().mockResolvedValue(scanResult)}
+        extractPdf={extractPdf}
+      />,
+    )
+
+    upload(container)
+    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
+    expect(await screen.findByRole('heading', { name: 'מבנה הטבלה השתנה — עוברים לחילוץ עם Gemini' })).toBeInTheDocument()
+    expect(screen.getByText(/Gemini נמשך בדרך כלל 1–2 דקות/)).toBeInTheDocument()
   })
 
   it('supports editing, selection, row validation, duplicate skipping, audit input, and success state', async () => {
@@ -77,7 +110,7 @@ describe('PDF import approval workflow', () => {
         repository={importRepository}
         scanPdf={vi.fn().mockResolvedValue(scanResult)}
         extractPdf={vi.fn().mockResolvedValue({
-          model: 'gemini-test', warnings: ['גובה בשורה האחרונה לא היה קריא'],
+          ...fallbackMetadata, warnings: ['גובה בשורה האחרונה לא היה קריא'],
           donors: [
             validDonor('A-1'), validDonor(' A-1 '), validDonor('B-2'),
             validDonor('', { heightMeters: null, weightKg: 400, cmvIgg: '' }),
@@ -87,10 +120,10 @@ describe('PDF import approval workflow', () => {
     )
 
     upload(container)
-    await screen.findByRole('button', { name: 'חילוץ נתונים עם Gemini' })
-    fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים עם Gemini' }))
+    await screen.findByRole('button', { name: 'חילוץ נתונים' })
+    fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
     expect(await screen.findByRole('heading', { name: 'נמצאו 4 שורות תורמים' })).toBeInTheDocument()
-    expect(screen.getByText(/אזהרות Gemini/)).toBeInTheDocument()
+    expect(screen.getByText(/אזהרות חילוץ/)).toBeInTheDocument()
     expect(screen.getAllByText('כפול בקובץ')).toHaveLength(2)
     expect(screen.getAllByText(/כבר קיים במאגר|כבר קיים/)).toHaveLength(2)
     expect(screen.getAllByText('נדרש תיקון')).toHaveLength(1)
@@ -110,7 +143,9 @@ describe('PDF import approval workflow', () => {
 
     await waitFor(() => expect(importApproved).toHaveBeenCalledWith(expect.objectContaining({
       sourceFileName: 'fixture.pdf', startPage: 2, endPage: 4, pageCount: 3,
-      model: 'gemini-test', adminEmail: 'jgabbayj@gmail.com',
+      model: 'gemini-test', extractionMethod: 'gemini-fallback',
+      parserVersion: 'donor-table-v1', extractionDurationMs: 1450,
+      fallbackReason: 'columns_ambiguous', adminEmail: 'jgabbayj@gmail.com',
       warnings: ['גובה בשורה האחרונה לא היה קריא'],
       donors: [expect.objectContaining({ donorNumber: 'C-3', heightMeters: 1.77, weightKg: 72, cmvIgg: 'חיובי' })],
       skippedDuplicateNumbers: [' A-1 ', 'B-2'],
@@ -125,11 +160,11 @@ describe('PDF import approval workflow', () => {
         adminEmail="jgabbayj@gmail.com"
         repository={repository({ importApproved: vi.fn().mockRejectedValue(new Error('private diagnostics')) })}
         scanPdf={vi.fn().mockResolvedValue(scanResult)}
-        extractPdf={vi.fn().mockResolvedValue({ model: 'gemini-test', warnings: [], donors: [validDonor('A-1')] })}
+        extractPdf={vi.fn().mockResolvedValue({ ...deterministicMetadata, warnings: [], donors: [validDonor('A-1')] })}
       />,
     )
     upload(container)
-    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים עם Gemini' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
     fireEvent.click(await screen.findByRole('button', { name: 'אישור וייבוא 1 תורמים' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('אף תורם לא נוסף')
     expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()

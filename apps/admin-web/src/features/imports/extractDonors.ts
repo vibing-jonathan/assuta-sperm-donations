@@ -1,5 +1,11 @@
 import type { DonorInput } from '../donors/donor'
 import { auth } from '../../lib/firebase'
+import {
+  DETERMINISTIC_PARSER_VERSION,
+  DeterministicExtractionFailure,
+  extractDonorsDeterministically,
+  type DeterministicFallbackReason,
+} from './deterministicExtraction'
 import type { PdfScanResult } from './scanDonorPdf'
 
 interface ExtractionRequest {
@@ -13,6 +19,20 @@ export interface ExtractionResult {
   donors: DonorInput[]
   warnings: string[]
   model: string
+  extractionMethod: 'deterministic' | 'gemini-fallback'
+  parserVersion: string
+  extractionDurationMs: number
+  fallbackReason: DeterministicFallbackReason | null
+}
+
+interface GeminiExtractionResponse {
+  donors: DonorInput[]
+  warnings: string[]
+  model: string
+}
+
+export interface HybridExtractionOptions {
+  onFallback?: (reason: DeterministicFallbackReason) => void
 }
 
 export const extractionErrorMessages = {
@@ -44,7 +64,7 @@ export function mapExtractionHttpError(status: number, safeCode?: string) {
   return extractionErrorMessages.connection
 }
 
-export async function extractDonors(file: File, range: PdfScanResult) {
+export async function extractDonorsWithGemini(file: File, range: PdfScanResult) {
   const { prepareRelevantPdf } = await import('./prepareRelevantPdf')
   const prepared = await prepareRelevantPdf(file, range)
   const user = auth.currentUser
@@ -78,8 +98,40 @@ export async function extractDonors(file: File, range: PdfScanResult) {
     throw new Error(mapExtractionHttpError(response.status, safeCode))
   }
   try {
-    return await response.json() as ExtractionResult
+    return await response.json() as GeminiExtractionResponse
   } catch {
     throw new Error(extractionErrorMessages.response)
+  }
+}
+
+export async function extractDonors(
+  file: File,
+  range: PdfScanResult,
+  options: HybridExtractionOptions = {},
+): Promise<ExtractionResult> {
+  const startedAt = Date.now()
+  try {
+    const extracted = await extractDonorsDeterministically(file, range)
+    return {
+      ...extracted,
+      model: DETERMINISTIC_PARSER_VERSION,
+      extractionMethod: 'deterministic',
+      parserVersion: DETERMINISTIC_PARSER_VERSION,
+      extractionDurationMs: Date.now() - startedAt,
+      fallbackReason: null,
+    }
+  } catch (error) {
+    const fallbackReason = error instanceof DeterministicExtractionFailure
+      ? error.reason
+      : 'unsupported_layout'
+    options.onFallback?.(fallbackReason)
+    const extracted = await extractDonorsWithGemini(file, range)
+    return {
+      ...extracted,
+      extractionMethod: 'gemini-fallback',
+      parserVersion: DETERMINISTIC_PARSER_VERSION,
+      extractionDurationMs: Date.now() - startedAt,
+      fallbackReason,
+    }
   }
 }

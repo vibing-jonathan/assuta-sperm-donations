@@ -11,6 +11,8 @@ import {
 import { analyzeReviewRows, createReviewRows, type ReviewRow } from './importReview'
 import { MAX_PDF_BYTES, scanDonorPdf, type PdfScanResult } from './scanDonorPdf'
 
+type ExtractionPhase = 'deterministic' | 'gemini-fallback'
+
 export interface PdfImportProps {
   adminEmail: string
   onNavigateToDonors?: () => void
@@ -65,6 +67,7 @@ export function PdfImport({
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [extractionPhase, setExtractionPhase] = useState<ExtractionPhase>('deterministic')
   const [isImporting, setIsImporting] = useState(false)
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
   const [rows, setRows] = useState<ReviewRow[]>([])
@@ -159,8 +162,11 @@ export function PdfImport({
     setExistingNumbers(null)
     setImportResult(null)
     setError(null)
+    setExtractionPhase('deterministic')
     try {
-      const nextExtraction = await extractPdf(file, result)
+      const nextExtraction = await extractPdf(file, result, {
+        onFallback: () => setExtractionPhase('gemini-fallback'),
+      })
       setExtraction(nextExtraction)
       setRows(createReviewRows(nextExtraction.donors))
       try {
@@ -215,6 +221,10 @@ export function PdfImport({
         endPage: result.endPage,
         pageCount: result.pageCount,
         model: extraction.model,
+        extractionMethod: extraction.extractionMethod,
+        parserVersion: extraction.parserVersion,
+        extractionDurationMs: extraction.extractionDurationMs,
+        fallbackReason: extraction.fallbackReason,
         adminEmail,
         warnings: extraction.warnings,
         donors: importableRows.map((row) => row.donor),
@@ -247,8 +257,8 @@ export function PdfImport({
       <aside className="import-notice">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>חילוץ עם Gemini נמשך בדרך כלל 1–2 דקות.</strong>
-          <p>בזמן החילוץ יש להשאיר את העמוד פתוח. רק עמודי הטבלה שאותרו יישלחו לחילוץ.</p>
+          <strong>המערכת מנסה תחילה חילוץ מקומי מהיר.</strong>
+          <p>אם מבנה הטבלה אינו מזוהה בביטחון, המערכת עוברת אוטומטית ל-Gemini — תהליך שנמשך בדרך כלל 1–2 דקות.</p>
         </div>
       </aside>
 
@@ -290,9 +300,9 @@ export function PdfImport({
                     <strong>עמודי הטבלה אותרו</strong>
                     <span>עמודים {result.startPage}–{result.endPage}</span>
                     <small>{result.pageCount} עמודים מתוך {result.totalPages} יועברו לחילוץ</small>
-                    <p className="extraction-duration">החילוץ נמשך בדרך כלל 1–2 דקות. יש להשאיר את העמוד פתוח עד לסיום.</p>
+                    <p className="extraction-duration">חילוץ מקומי נמשך בדרך כלל מספר שניות. רק אם המבנה השתנה, Gemini יופעל והתהליך עשוי להימשך 1–2 דקות.</p>
                     <button className="primary-button" type="button" disabled={activeOperation} onClick={() => void runExtraction()}>
-                      חילוץ נתונים עם Gemini
+                      חילוץ נתונים
                     </button>
                   </div>
                 )}
@@ -307,8 +317,10 @@ export function PdfImport({
         <section className="processing-panel" role="status" aria-live="polite" aria-busy="true">
           <span className="processing-spinner" aria-hidden="true" />
           <div>
-            <h2>Gemini מחלץ את נתוני התורמים</h2>
-            <p>התהליך נמשך בדרך כלל 1–2 דקות. יש להשאיר את העמוד פתוח ולא להחליף את הקובץ.</p>
+            <h2>{extractionPhase === 'deterministic' ? 'קורא את טבלת התורמים באופן מקומי' : 'מבנה הטבלה השתנה — עוברים לחילוץ עם Gemini'}</h2>
+            <p>{extractionPhase === 'deterministic'
+              ? 'החילוץ המקומי נמשך בדרך כלל מספר שניות. יש להשאיר את העמוד פתוח עד לסיום.'
+              : 'Gemini נמשך בדרך כלל 1–2 דקות. יש להשאיר את העמוד פתוח ולא להחליף את הקובץ.'}</p>
             <strong className="elapsed-time">זמן שחלף: <span dir="ltr">{formatElapsed(elapsedSeconds)}</span></strong>
           </div>
         </section>
@@ -322,12 +334,15 @@ export function PdfImport({
               <h2 id="extraction-title">נמצאו {extraction.donors.length} שורות תורמים</h2>
               <p>ערכו שדות שדורשים תיקון, הסירו סימון משורות שלא לייבא ואשרו רק לאחר בדיקה.</p>
             </div>
-            <small dir="ltr">{extraction.model}</small>
+            <div className="extraction-method">
+              <strong>{extraction.extractionMethod === 'deterministic' ? 'חילוץ מקומי' : 'Gemini הופעל כגיבוי'}</strong>
+              <small dir="ltr">{extraction.extractionMethod === 'deterministic' ? extraction.parserVersion : extraction.model}</small>
+            </div>
           </div>
 
           {extraction.warnings.length > 0 && (
             <div className="extraction-warnings" role="alert">
-              <strong>⚠ אזהרות Gemini — יש לבדוק לפני אישור</strong>
+              <strong>⚠ אזהרות חילוץ — יש לבדוק לפני אישור</strong>
               <ul>{extraction.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>
             </div>
           )}
@@ -481,7 +496,7 @@ export function PdfImport({
               </button>
               <button className="secondary-button" type="button" disabled={activeOperation} onClick={discardReview}>ביטול והשלכת החילוץ</button>
             </div>
-            <button className="text-button" type="button" disabled={activeOperation} onClick={() => void runExtraction()}>חילוץ מחדש עם Gemini</button>
+            <button className="text-button" type="button" disabled={activeOperation} onClick={() => void runExtraction()}>חילוץ מחדש</button>
           </footer>
         </section>
       )}

@@ -46,7 +46,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ייבוא קבצים' }))
     expect(screen.getByRole('heading', { level: 1, name: 'ייבוא תורמים מקובץ' })).toBeInTheDocument()
-    expect(screen.getByText('חילוץ עם Gemini נמשך בדרך כלל 1–2 דקות.')).toBeInTheDocument()
+    expect(screen.getByText('המערכת מנסה תחילה חילוץ מקומי מהיר.')).toBeInTheDocument()
   })
 
   it('prevents in-app navigation and sign-out during extraction', async () => {
@@ -63,12 +63,12 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ייבוא קבצים' }))
     const file = new File(['safe fixture'], 'fixture.pdf', { type: 'application/pdf' })
     fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } })
-    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים עם Gemini' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
 
     await waitFor(() => {
       expect(screen.getAllByRole('button', { name: 'תורמים' }).every((button) => button.hasAttribute('disabled'))).toBe(true)
       expect(screen.getByRole('button', { name: 'יציאה' })).toBeDisabled()
     })
-    expect(screen.getByRole('heading', { name: 'Gemini מחלץ את נתוני התורמים' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'קורא את טבלת התורמים באופן מקומי' })).toBeInTheDocument()
   })
 })

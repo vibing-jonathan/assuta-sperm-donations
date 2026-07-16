@@ -36,7 +36,9 @@ function fakeStore(existingClaims: Set<string> = new Set()) {
 
 const context = {
   sourceFileName: 'fixture.pdf', startPage: 2, endPage: 4, pageCount: 3,
-  model: 'gemini-test', adminEmail: 'jgabbayj@gmail.com', warnings: ['בדיקה'],
+  model: 'donor-table-v1', extractionMethod: 'deterministic' as const,
+  parserVersion: 'donor-table-v1', extractionDurationMs: 418, fallbackReason: null,
+  adminEmail: 'jgabbayj@gmail.com', warnings: ['בדיקה'],
 }
 
 describe('atomic donor import', () => {
@@ -52,7 +54,9 @@ describe('atomic donor import', () => {
     const audit = [...committed.entries()].find(([path]) => path.startsWith('donorImports/'))?.[1]
     expect(audit).toMatchObject({
       sourceFileName: 'fixture.pdf', detectedStartPage: 2, detectedEndPage: 4,
-      detectedPageCount: 3, geminiModel: 'gemini-test', importedBy: 'jgabbayj@gmail.com',
+      detectedPageCount: 3, geminiModel: null, extractionMethod: 'deterministic',
+      parserVersion: 'donor-table-v1', extractionDurationMs: 418, fallbackReason: null,
+      importedBy: 'jgabbayj@gmail.com',
       approvedCount: 1, importedCount: 1, skippedCount: 1, status: 'completed',
       outcome: 'imported_with_skips', importedAt: 'server-time',
     })
@@ -69,6 +73,26 @@ describe('atomic donor import', () => {
     expect([...committed.keys()].some((path) => path.startsWith('donors/'))).toBe(false)
     expect([...committed.values()].find((value) => value.status === 'completed')).toMatchObject({
       outcome: 'duplicates_skipped', importedCount: 0,
+    })
+  })
+
+  it('records Gemini only when it was used as a structural fallback', async () => {
+    const { store, committed } = fakeStore()
+    await executeAtomicImport(store, {
+      ...context,
+      model: 'gemini-test',
+      extractionMethod: 'gemini-fallback',
+      extractionDurationMs: 83_400,
+      fallbackReason: 'columns_ambiguous',
+      donors: [donor('A-2')],
+      skippedDuplicateNumbers: [],
+    })
+
+    const audit = [...committed.entries()].find(([path]) => path.startsWith('donorImports/'))?.[1]
+    expect(audit).toMatchObject({
+      extractionMethod: 'gemini-fallback', geminiModel: 'gemini-test',
+      parserVersion: 'donor-table-v1', extractionDurationMs: 83_400,
+      fallbackReason: 'columns_ambiguous',
     })
   })
 

@@ -84,12 +84,14 @@ service cloud.firestore {
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
           'sourceFileName', 'detectedStartPage', 'detectedEndPage', 'detectedPageCount',
-          'geminiModel', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
+          'geminiModel', 'extractionMethod', 'parserVersion', 'extractionDurationMs',
+          'fallbackReason', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
           'skippedCount', 'warnings', 'duplicateDonorNumbers', 'status', 'outcome'
         ])
         && request.resource.data.keys().hasAll([
           'sourceFileName', 'detectedStartPage', 'detectedEndPage', 'detectedPageCount',
-          'geminiModel', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
+          'geminiModel', 'extractionMethod', 'parserVersion', 'extractionDurationMs',
+          'fallbackReason', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
           'skippedCount', 'warnings', 'duplicateDonorNumbers', 'status', 'outcome'
         ])
         && request.resource.data.sourceFileName is string
@@ -101,7 +103,27 @@ service cloud.firestore {
         && request.resource.data.detectedEndPage >= request.resource.data.detectedStartPage
         && request.resource.data.detectedPageCount is int
         && request.resource.data.detectedPageCount == request.resource.data.detectedEndPage - request.resource.data.detectedStartPage + 1
-        && request.resource.data.geminiModel is string
+        && (request.resource.data.geminiModel == null
+          || request.resource.data.geminiModel is string)
+        && request.resource.data.extractionMethod in ['deterministic', 'gemini-fallback']
+        && request.resource.data.parserVersion is string
+        && request.resource.data.parserVersion.size() > 0
+        && request.resource.data.parserVersion.size() <= 100
+        && request.resource.data.extractionDurationMs is int
+        && request.resource.data.extractionDurationMs >= 0
+        && request.resource.data.fallbackReason in [
+          null, 'text_layer_unavailable', 'headers_missing', 'columns_ambiguous',
+          'rows_ambiguous', 'unsupported_layout'
+        ]
+        && (
+          (request.resource.data.extractionMethod == 'deterministic'
+            && request.resource.data.geminiModel == null
+            && request.resource.data.fallbackReason == null)
+          || (request.resource.data.extractionMethod == 'gemini-fallback'
+            && request.resource.data.geminiModel is string
+            && request.resource.data.geminiModel.size() > 0
+            && request.resource.data.fallbackReason != null)
+        )
         && request.resource.data.importedBy == request.auth.token.email
         && request.resource.data.importedAt == request.time
         && request.resource.data.approvedCount is int
