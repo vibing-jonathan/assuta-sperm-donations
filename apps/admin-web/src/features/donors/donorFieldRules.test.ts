@@ -8,8 +8,8 @@ import {
 } from './donorFieldRules'
 
 describe('donor field normalization rules', () => {
-  it('repairs missing origin delimiters, canonicalizes aliases, and removes semantic duplicates', () => {
-    expect(normalizeListField('origin', 'רוסיה, רומניה בלרוס, רוסי')).toBe('רוסיה, רומניה, בלרוס')
+  it('preserves arbitrary values and removes only exact normalized duplicates', () => {
+    expect(normalizeListField('origin', 'רוסיה, רומניה בלרוס, רוסי, רוסיה')).toBe('רוסיה, רומניה בלרוס, רוסי')
   })
 
   it('normalizes Hebrew quotation spacing and comma spacing', () => {
@@ -28,7 +28,7 @@ describe('donor field normalization rules', () => {
       eyeColor: 'חום', hairColor: 'חום', cmvIgg: 'negative',
     })
     expect(normalized).toMatchObject({
-      donorNumber: 'D-1', occupation: 'מנהל פרויקטים', origin: 'רומניה, בלרוס',
+      donorNumber: 'D-1', occupation: 'מנהל פרויקטים', origin: 'רומניה בלרוס',
       geneticCarrierStatus: 'חיובי', religion: 'יהודי', skinColor: 'בהיר-משתזף', cmvIgg: 'שלילי',
     })
   })
@@ -65,12 +65,10 @@ describe('donor field normalization rules', () => {
     )
   })
 
-  it('requires manual review for semantic values outside the controlled vocabulary', () => {
-    expect(verifyListField('origin', 'רוסיה, אטלנטיס')).toBe(
-      'ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.',
-    )
-    expect(verifyListField('religion', 'ערך לא מוכר')).toBe(
-      'ערך לא מוכר בשדה דת: ערך לא מוכר. יש לתקן ידנית.',
-    )
+  it('accepts arbitrary semantic values without an allow-list', () => {
+    expect(verifyListField('origin', 'רוסיה, אטלנטיס')).toBeNull()
+    expect(verifyListField('religion', 'ערך לא מוכר')).toBeNull()
+    expect(verifyListField('skinColor', 'סגול-מנצנץ')).toBeNull()
+    expect(verifyListField('eyeColor', 'טורקיז')).toBeNull()
   })
 })

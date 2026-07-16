@@ -71,7 +71,7 @@ export function PdfImport({
   const [isScanning, setIsScanning] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionPhase, setExtractionPhase] = useState<ExtractionPhase>('deterministic')
-  const [forceGemini, setForceGemini] = useState(false)
+  const [forceGemini, setForceGemini] = useState(true)
   const [isImporting, setIsImporting] = useState(false)
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
   const [rows, setRows] = useState<ReviewRow[]>([])
@@ -262,8 +262,8 @@ export function PdfImport({
       <aside className="import-notice">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>המערכת מנסה תחילה חילוץ מקומי מהיר.</strong>
-          <p>אם מבנה הטבלה אינו מזוהה בביטחון, המערכת עוברת אוטומטית ל-Gemini — תהליך שנמשך בדרך כלל 1–2 דקות.</p>
+          <strong>חילוץ עם Gemini מסומן כברירת מחדל.</strong>
+          <p>אפשר לבטל את הסימון כדי לנסות תחילה חילוץ מקומי מהיר; אם מבנה הטבלה אינו מזוהה בביטחון, המערכת עדיין תעבור אוטומטית ל-Gemini.</p>
         </div>
       </aside>
 
@@ -305,7 +305,9 @@ export function PdfImport({
                     <strong>עמודי הטבלה אותרו</strong>
                     <span>עמודים {result.startPage}–{result.endPage}</span>
                     <small>{result.pageCount} עמודים מתוך {result.totalPages} יועברו לחילוץ</small>
-                    <p className="extraction-duration">חילוץ מקומי נמשך בדרך כלל מספר שניות. רק אם המבנה השתנה, Gemini יופעל והתהליך עשוי להימשך 1–2 דקות.</p>
+                    <p className="extraction-duration">{forceGemini
+                      ? 'Gemini מסומן כעת ומשך החילוץ הוא בדרך כלל 1–2 דקות.'
+                      : 'חילוץ מקומי נמשך בדרך כלל מספר שניות. אם המבנה השתנה, Gemini יופעל והתהליך עשוי להימשך 1–2 דקות.'}</p>
                     <label className="force-gemini-option">
                       <input
                         type="checkbox"

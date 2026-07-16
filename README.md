@@ -64,13 +64,12 @@ second donor with the same number. Deleting a donor also removes its matching cl
 
 The importer first parses the stable catalog table locally from PDF text coordinates. If its strict
 header, column, or row confidence checks fail, it automatically falls back to the protected Gemini
-Function. Administrators can also select the explicit Gemini override before extraction to bypass
-the deterministic parser; audit records distinguish this from an automatic fallback. All paths run
+Function. The Gemini override is selected by default; administrators can clear it to try the local
+parser first. Audit records distinguish forced Gemini from an automatic fallback. All paths run
 through local, field-specific normalization before review: PDF line-aware
-list reconstruction, canonical Hebrew punctuation and comma spacing, approved aliases, empty-token
-removal, and duplicate removal. Remaining malformed list fields and semantic values outside the
-controlled vocabulary are reported as blocking, row-specific review errors for manual correction
-instead of being guessed by AI. Every approval writes an admin-only `donorImports` audit document with the source file
+list reconstruction, canonical Hebrew punctuation and comma spacing, empty-token removal, and exact
+duplicate removal. Semantic values are unrestricted; only malformed field structure is reported as a
+blocking, row-specific review error for manual correction. Every approval writes an admin-only `donorImports` audit document with the source file
 name, detected page range, extraction method, parser version, duration, fallback reason and Gemini
 model when used, administrator, timestamp, counts, warnings, duplicate numbers, status, and outcome.
 Failed transactions make a best-effort `failed/import_failed` audit

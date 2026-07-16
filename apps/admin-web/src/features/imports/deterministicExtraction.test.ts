@@ -96,6 +96,6 @@ describe('deterministic donor table extraction', () => {
     )
 
     const result = parseDeterministicTablePages([page])
-    expect(result.donors[0]?.origin).toBe('רוסיה, רומניה, בלרוס')
+    expect(result.donors[0]?.origin).toBe('רוסיה, רומניה, בלרוס, רוסי')
   })
 })

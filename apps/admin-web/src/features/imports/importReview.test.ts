@@ -60,14 +60,14 @@ describe('import review analysis', () => {
     expect(row?.eligible).toBe(false)
   })
 
-  it('marks unknown semantic values as ineligible until manually corrected', () => {
+  it('accepts arbitrary semantic values without making the row ineligible', () => {
     const [row] = analyzeReviewRows(createReviewRows([
       donor('A-4', { origin: 'רוסיה, אטלנטיס' }),
     ]), new Set())
 
-    expect(row?.errors.origin).toBe('ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.')
-    expect(row?.eligible).toBe(false)
-    expect(selectedValidDonors(row ? [row] : [])).toEqual([])
+    expect(row?.errors.origin).toBeUndefined()
+    expect(row?.eligible).toBe(true)
+    expect(selectedValidDonors(row ? [row] : [])).toHaveLength(1)
   })
 
   it('excludes manually deselected rows', () => {

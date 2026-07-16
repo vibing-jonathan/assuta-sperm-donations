@@ -58,6 +58,7 @@ describe('PDF import approval workflow', () => {
 
     upload(container)
     await act(async () => { await Promise.resolve() })
+    fireEvent.click(screen.getByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ }))
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
     await act(async () => { await Promise.resolve() })
     expect(screen.getByRole('heading', { name: 'קורא את טבלת התורמים באופן מקומי' })).toBeInTheDocument()
@@ -90,12 +91,13 @@ describe('PDF import approval workflow', () => {
     )
 
     upload(container)
+    fireEvent.click(await screen.findByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ }))
     fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
     expect(await screen.findByRole('heading', { name: 'מבנה הטבלה השתנה — עוברים לחילוץ עם Gemini' })).toBeInTheDocument()
     expect(screen.getByText(/Gemini נמשך בדרך כלל 1–2 דקות/)).toBeInTheDocument()
   })
 
-  it('lets an administrator force Gemini and skips the local extraction phase', async () => {
+  it('forces Gemini by default and skips the local extraction phase', async () => {
     const extractPdf = vi.fn((_file: File, _range: PdfScanResult): Promise<ExtractionResult> => new Promise(() => undefined))
     const { container } = render(
       <PdfImport
@@ -108,7 +110,7 @@ describe('PDF import approval workflow', () => {
 
     upload(container)
     const forceGemini = await screen.findByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ })
-    fireEvent.click(forceGemini)
+    expect(forceGemini).toBeChecked()
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
 
     expect(extractPdf).toHaveBeenCalledWith(
@@ -180,7 +182,7 @@ describe('PDF import approval workflow', () => {
     expect(screen.getByRole('status').querySelector('p')).toHaveTextContent('1 תורמים יובאו, 2 כפילויות דולגו')
   })
 
-  it('highlights an unknown semantic value and blocks approval until it is fixed', async () => {
+  it('accepts arbitrary semantic values and keeps structural normalization on blur', async () => {
     const { container } = render(
       <PdfImport
         adminEmail="jgabbayj@gmail.com"
@@ -198,10 +200,9 @@ describe('PDF import approval workflow', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
 
     const origin = await screen.findByLabelText('מוצא, שורה 1')
-    expect(origin).toHaveAttribute('aria-invalid', 'true')
-    expect(origin).toHaveAttribute('title', 'ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.')
-    expect(screen.getAllByText('ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.').length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: 'אישור וסיום — אין תורמים חדשים' })).toBeDisabled()
+    expect(origin).toHaveAttribute('aria-invalid', 'false')
+    expect(origin).not.toHaveAttribute('title')
+    expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()
 
     fireEvent.change(origin, { target: { value: 'רוסיה ,רומניה' } })
     fireEvent.blur(origin)
