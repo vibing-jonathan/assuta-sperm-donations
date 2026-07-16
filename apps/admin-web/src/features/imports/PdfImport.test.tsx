@@ -32,7 +32,8 @@ function repository(overrides: Partial<ImportRepository> = {}): ImportRepository
   return {
     listNormalizedDonorNumbers: vi.fn().mockResolvedValue(new Set()),
     importApproved: vi.fn().mockResolvedValue({
-      importId: 'import-1', importedCount: 1, skippedCount: 0, skippedDuplicateNumbers: [],
+      importId: 'import-1', importedCount: 1, replacedCount: 0, skippedCount: 0,
+      replacedDonorNumbers: [], skippedDuplicateNumbers: [],
     }),
     ...overrides,
   }
@@ -123,8 +124,8 @@ describe('PDF import approval workflow', () => {
 
   it('supports editing, selection, row validation, duplicate skipping, audit input, and success state', async () => {
     const importApproved = vi.fn().mockResolvedValue({
-      importId: 'import-1', importedCount: 1, skippedCount: 2,
-      skippedDuplicateNumbers: [' A-1 ', 'B-2'],
+      importId: 'import-1', importedCount: 1, replacedCount: 1, skippedCount: 1,
+      replacedDonorNumbers: ['B-2'], skippedDuplicateNumbers: [' A-1 '],
     })
     const importRepository = repository({
       listNormalizedDonorNumbers: vi.fn().mockResolvedValue(new Set(['b-2'])),
@@ -154,11 +155,11 @@ describe('PDF import approval workflow', () => {
     expect(container.querySelectorAll('.negative-carrier-highlight')).toHaveLength(2)
     expect(screen.getByText(/אזהרות חילוץ/)).toBeInTheDocument()
     expect(screen.getAllByText('כפול בקובץ')).toHaveLength(2)
-    expect(screen.getAllByText(/כבר קיים במאגר|כבר קיים/)).toHaveLength(2)
+    expect(screen.getAllByText(/יחליף/)).toHaveLength(2)
     expect(screen.getAllByText('נדרש תיקון')).toHaveLength(1)
     expect(container.querySelector('.mobile-review-list')).toBeInTheDocument()
     expect(container.querySelectorAll('.mobile-review-card')).toHaveLength(4)
-    expect(screen.getByRole('button', { name: /אישור וייבוא/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /אישור ושמירת/ })).toBeDisabled()
 
     fireEvent.click(screen.getByLabelText('ייבוא שורה 1'))
     fireEvent.change(screen.getByLabelText('מס׳ תורם, שורה 4'), { target: { value: 'C-3' } })
@@ -166,7 +167,7 @@ describe('PDF import approval workflow', () => {
     fireEvent.change(screen.getByLabelText('משקל, שורה 4'), { target: { value: '72' } })
     fireEvent.change(screen.getByLabelText('CMV IgG, שורה 4'), { target: { value: 'חיובי' } })
 
-    const approve = screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })
+    const approve = screen.getByRole('button', { name: 'אישור ושמירת 2 תורמים' })
     expect(approve).toBeEnabled()
     fireEvent.click(approve)
 
@@ -176,11 +177,14 @@ describe('PDF import approval workflow', () => {
       parserVersion: 'donor-table-v2', extractionDurationMs: 1450,
       fallbackReason: 'columns_ambiguous', adminEmail: 'jgabbayj@gmail.com',
       warnings: ['גובה בשורה האחרונה לא היה קריא'],
-      donors: [expect.objectContaining({ donorNumber: 'C-3', heightMeters: 1.77, weightKg: 72, cmvIgg: 'חיובי' })],
-      skippedDuplicateNumbers: [' A-1 ', 'B-2'],
+      donors: [
+        expect.objectContaining({ donorNumber: 'B-2' }),
+        expect.objectContaining({ donorNumber: 'C-3', heightMeters: 1.77, weightKg: 72, cmvIgg: 'חיובי' }),
+      ],
+      skippedDuplicateNumbers: [' A-1 '],
     })))
     expect(await screen.findByRole('heading', { name: 'הייבוא הושלם בהצלחה' })).toBeInTheDocument()
-    expect(screen.getByRole('status').querySelector('p')).toHaveTextContent('1 תורמים יובאו, 2 כפילויות דולגו')
+    expect(screen.getByRole('status').querySelector('p')).toHaveTextContent('1 תורמים חדשים יובאו, 1 תורמים קיימים הוחלפו, 1 כפילויות בקובץ דולגו')
   })
 
   it('accepts arbitrary semantic values and keeps structural normalization on blur', async () => {
@@ -203,13 +207,13 @@ describe('PDF import approval workflow', () => {
     const origin = await screen.findByLabelText('מוצא, שורה 1')
     expect(origin).toHaveAttribute('aria-invalid', 'false')
     expect(origin).not.toHaveAttribute('title')
-    expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'אישור ושמירת 1 תורמים' })).toBeEnabled()
 
     fireEvent.change(origin, { target: { value: 'רוסיה ,רומניה' } })
     fireEvent.blur(origin)
     expect(origin).toHaveValue('רוסיה, רומניה')
     expect(origin).toHaveAttribute('aria-invalid', 'false')
-    expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'אישור ושמירת 1 תורמים' })).toBeEnabled()
   })
 
   it('reports an atomic save failure and keeps the review available for retry', async () => {
@@ -223,9 +227,9 @@ describe('PDF import approval workflow', () => {
     )
     upload(container)
     fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
-    fireEvent.click(await screen.findByRole('button', { name: 'אישור וייבוא 1 תורמים' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('אף תורם לא נוסף')
-    expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()
+    fireEvent.click(await screen.findByRole('button', { name: 'אישור ושמירת 1 תורמים' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('לא נשמרו שינויים')
+    expect(screen.getByRole('button', { name: 'אישור ושמירת 1 תורמים' })).toBeEnabled()
     expect(screen.queryByText('private diagnostics')).not.toBeInTheDocument()
   })
 })

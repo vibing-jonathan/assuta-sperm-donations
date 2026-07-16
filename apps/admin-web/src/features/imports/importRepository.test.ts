@@ -13,9 +13,9 @@ const donor = (donorNumber: string): DonorInput => ({
   heightMeters: 1.8, weightKg: 75, cmvIgg: 'שלילי',
 })
 
-function fakeStore(existingClaims: Set<string> = new Set()) {
+function fakeStore(existingDocuments: Map<string, Record<string, unknown>> = new Map()) {
   let sequence = 0
-  const committed = new Map<string, Record<string, unknown>>()
+  const committed = new Map(existingDocuments)
   const store: AtomicImportStore = {
     createId: (collectionName) => `${collectionName}-${++sequence}`,
     timestamp: () => 'server-time',
@@ -23,7 +23,7 @@ function fakeStore(existingClaims: Set<string> = new Set()) {
     async runTransaction(operation) {
       const pending = new Map<string, Record<string, unknown>>()
       const transaction: AtomicTransaction = {
-        get: async (path) => ({ exists: existingClaims.has(path) }),
+        get: async (path) => ({ exists: committed.has(path), data: committed.get(path) }),
         set: (path, data) => { pending.set(path, data) },
       }
       const result = await operation(transaction)
@@ -48,7 +48,7 @@ describe('atomic donor import', () => {
       ...context, donors: [donor('A-1')], skippedDuplicateNumbers: ['OLD-1'],
     })
 
-    expect(result).toMatchObject({ importedCount: 1, skippedCount: 1 })
+    expect(result).toMatchObject({ importedCount: 1, replacedCount: 0, skippedCount: 1 })
     expect([...committed.keys()].filter((path) => path.startsWith('donors/'))).toHaveLength(1)
     expect([...committed.keys()].filter((path) => path.startsWith('donorNumberClaims/'))).toHaveLength(1)
     const audit = [...committed.entries()].find(([path]) => path.startsWith('donorImports/'))?.[1]
@@ -57,7 +57,8 @@ describe('atomic donor import', () => {
       detectedPageCount: 3, geminiModel: null, extractionMethod: 'deterministic',
       parserVersion: 'donor-table-v2', extractionDurationMs: 418, fallbackReason: null,
       importedBy: 'jgabbayj@gmail.com',
-      approvedCount: 1, importedCount: 1, skippedCount: 1, status: 'completed',
+      approvedCount: 1, importedCount: 1, replacedCount: 0, skippedCount: 1,
+      replacedDonorNumbers: [], status: 'completed',
       outcome: 'imported_with_skips', importedAt: 'server-time',
     })
   })
@@ -74,30 +75,65 @@ describe('atomic donor import', () => {
     })
   })
 
-  it('rechecks claims inside the transaction and skips a concurrent duplicate', async () => {
-    const probe = fakeStore()
-    await executeAtomicImport(probe.store, { ...context, donors: [donor('A-1')], skippedDuplicateNumbers: [] })
-    const claimPath = [...probe.committed.keys()].find((path) => path.startsWith('donorNumberClaims/'))!
-    const { store, committed } = fakeStore(new Set([claimPath]))
+  it('defensively skips repeated numbers within the approved input', async () => {
+    const { store, committed } = fakeStore()
+    const result = await executeAtomicImport(store, {
+      ...context, donors: [donor('A-7'), donor(' a-7 ')], skippedDuplicateNumbers: [],
+    })
 
-    const result = await executeAtomicImport(store, { ...context, donors: [donor('A-1')], skippedDuplicateNumbers: [] })
-    expect(result).toMatchObject({ importedCount: 0, skippedCount: 1 })
-    expect([...committed.keys()].some((path) => path.startsWith('donors/'))).toBe(false)
+    expect(result).toMatchObject({
+      importedCount: 1, replacedCount: 0, skippedCount: 1,
+      skippedDuplicateNumbers: ['a-7'],
+    })
+    expect([...committed.keys()].filter((path) => path.startsWith('donors/'))).toHaveLength(1)
+  })
+
+  it('rechecks claims inside the transaction and atomically replaces an existing donor', async () => {
+    const claimPath = `donorNumberClaims/${donorNumberClaimId('A-1')}`
+    const donorPath = 'donors/existing-donor'
+    const existingDocuments = new Map<string, Record<string, unknown>>([
+      [claimPath, { donorId: 'existing-donor', donorNumber: 'A-1' }],
+      [donorPath, {
+        ...donor('A-1'), occupation: 'ישן', createdAt: 'original-time', createdBy: 'original-admin',
+        updatedAt: 'original-time', updatedBy: 'original-admin',
+      }],
+    ])
+    const { store, committed } = fakeStore(existingDocuments)
+
+    const result = await executeAtomicImport(store, {
+      ...context, donors: [{ ...donor('A-1'), occupation: 'חדש' }], skippedDuplicateNumbers: [],
+    })
+    expect(result).toMatchObject({
+      importedCount: 0, replacedCount: 1, skippedCount: 0, replacedDonorNumbers: ['A-1'],
+    })
+    expect(committed.get(donorPath)).toMatchObject({
+      occupation: 'חדש', createdAt: 'original-time', createdBy: 'original-admin',
+      updatedAt: 'server-time', updatedBy: 'jgabbayj@gmail.com',
+    })
     expect([...committed.values()].find((value) => value.status === 'completed')).toMatchObject({
-      outcome: 'duplicates_skipped', importedCount: 0,
+      outcome: 'replaced', importedCount: 0, replacedCount: 1,
     })
   })
 
-  it('treats a legacy starred claim as the same clean donor number', async () => {
+  it('replaces through a legacy starred claim and creates the canonical claim', async () => {
     const legacyClaimPath = `donorNumberClaims/${donorNumberClaimId('A-9***')}`
-    const { store, committed } = fakeStore(new Set([legacyClaimPath]))
+    const canonicalClaimPath = `donorNumberClaims/${donorNumberClaimId('A-9')}`
+    const donorPath = 'donors/legacy-donor'
+    const { store, committed } = fakeStore(new Map<string, Record<string, unknown>>([
+      [legacyClaimPath, { donorId: 'legacy-donor', donorNumber: 'A-9***' }],
+      [donorPath, {
+        ...donor('A-9'), createdAt: 'original-time', createdBy: 'original-admin',
+        updatedAt: 'original-time', updatedBy: 'original-admin',
+      }],
+    ]))
 
     const result = await executeAtomicImport(store, {
       ...context, donors: [donor('A-9')], skippedDuplicateNumbers: [],
     })
 
-    expect(result).toMatchObject({ importedCount: 0, skippedCount: 1 })
-    expect([...committed.keys()].some((path) => path.startsWith('donors/'))).toBe(false)
+    expect(result).toMatchObject({ importedCount: 0, replacedCount: 1, skippedCount: 0 })
+    expect(committed.get(donorPath)).toMatchObject({ donorNumber: 'A-9', importId: expect.any(String) })
+    expect(committed.get(canonicalClaimPath)).toMatchObject({ donorId: 'legacy-donor', donorNumber: 'A-9' })
   })
 
   it('records Gemini only when it was used as a structural fallback', async () => {
@@ -158,7 +194,7 @@ describe('atomic donor import', () => {
     })).rejects.toThrow('transaction unavailable')
     expect([...committed.keys()].some((path) => path.startsWith('donors/'))).toBe(false)
     expect([...committed.values()].find((value) => value.status === 'failed')).toMatchObject({
-      outcome: 'import_failed', importedCount: 0, skippedCount: 1,
+      outcome: 'import_failed', importedCount: 0, replacedCount: 0, skippedCount: 1,
     })
   })
 })

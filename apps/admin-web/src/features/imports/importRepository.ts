@@ -27,7 +27,9 @@ export interface ApprovedImport extends ImportAuditContext {
 export interface ImportResult {
   importId: string
   importedCount: number
+  replacedCount: number
   skippedCount: number
+  replacedDonorNumbers: string[]
   skippedDuplicateNumbers: string[]
 }
 
@@ -38,6 +40,7 @@ export interface ImportRepository {
 
 interface AtomicSnapshot {
   exists: boolean
+  data?: Record<string, unknown>
 }
 
 export interface AtomicTransaction {
@@ -67,7 +70,18 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
   }
 
   const importId = store.createId('donorImports')
-  const candidates = input.donors.map((donor) => {
+  const duplicateDonorsWithinInput: string[] = []
+  const seenInputNumbers = new Set<string>()
+  const uniqueDonors = input.donors.filter((donor) => {
+    const normalized = normalizeDonorNumber(parseDonorNumberMetadata(donor.donorNumber).donorNumber)
+    if (!normalized || !seenInputNumbers.has(normalized)) {
+      if (normalized) seenInputNumbers.add(normalized)
+      return true
+    }
+    duplicateDonorsWithinInput.push(donor.donorNumber)
+    return false
+  })
+  const candidates = uniqueDonors.map((donor) => {
     const metadata = parseDonorNumberMetadata(donor.donorNumber)
     const normalizedDonor = {
       ...donor,
@@ -94,16 +108,40 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
       )
 
       const concurrentDuplicates: string[] = []
-      const imported = candidates.filter((candidate, index) => {
+      const imported: typeof candidates = []
+      const replacements: Array<(typeof candidates)[number] & {
+        targetDonorId: string
+        canonicalClaimExists: boolean
+      }> = []
+      candidates.forEach((candidate, index) => {
         const [claim, legacyClaim] = claimSnapshots[index] ?? []
-        if (!claim?.exists && !legacyClaim?.exists) return true
+        if (!claim?.exists && !legacyClaim?.exists) {
+          imported.push(candidate)
+          return
+        }
+        const existingClaim = [claim, legacyClaim].find((snapshot) => (
+          snapshot?.exists && typeof snapshot.data?.donorId === 'string' && snapshot.data.donorId
+        )) ?? [claim, legacyClaim].find((snapshot) => snapshot?.exists)
+        const targetDonorId = existingClaim?.data?.donorId
+        if (typeof targetDonorId === 'string' && targetDonorId) {
+          replacements.push({
+            ...candidate,
+            targetDonorId,
+            canonicalClaimExists: Boolean(claim?.exists),
+          })
+          return
+        }
         concurrentDuplicates.push(candidate.donor.donorNumber)
-        return false
       })
+      const replacementSnapshots = await Promise.all(
+        replacements.map((candidate) => transaction.get(`donors/${candidate.targetDonorId}`)),
+      )
       const skippedDuplicateNumbers = uniqueNumbers([
         ...input.skippedDuplicateNumbers,
+        ...duplicateDonorsWithinInput,
         ...concurrentDuplicates,
       ])
+      const replacedDonorNumbers = uniqueNumbers(replacements.map((candidate) => candidate.donor.donorNumber))
       const timestamp = store.timestamp()
 
       for (const candidate of imported) {
@@ -124,9 +162,36 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         })
       }
 
-      const outcome = imported.length === 0
+      replacements.forEach((candidate, index) => {
+        const existingDonor = replacementSnapshots[index]
+        transaction.set(`donors/${candidate.targetDonorId}`, {
+          ...candidate.donor,
+          importId,
+          createdAt: existingDonor?.data?.createdAt ?? timestamp,
+          createdBy: typeof existingDonor?.data?.createdBy === 'string'
+            ? existingDonor.data.createdBy
+            : input.adminEmail,
+          updatedAt: timestamp,
+          updatedBy: input.adminEmail,
+        })
+        if (!candidate.canonicalClaimExists) {
+          transaction.set(candidate.claimPath, {
+            donorId: candidate.targetDonorId,
+            donorNumber: candidate.donor.donorNumber,
+            normalizedDonorNumber: normalizeDonorNumber(candidate.donor.donorNumber),
+            createdAt: timestamp,
+            createdBy: input.adminEmail,
+          })
+        }
+      })
+
+      const outcome = imported.length === 0 && replacements.length === 0
         ? 'duplicates_skipped'
-        : skippedDuplicateNumbers.length > 0 ? 'imported_with_skips' : 'imported'
+        : replacements.length > 0 && skippedDuplicateNumbers.length > 0
+          ? 'imported_with_replacements_and_skips'
+          : replacements.length > 0 && imported.length > 0
+            ? 'imported_with_replacements'
+            : replacements.length > 0 ? 'replaced' : skippedDuplicateNumbers.length > 0 ? 'imported_with_skips' : 'imported'
       transaction.set(`donorImports/${importId}`, {
         sourceFileName: input.sourceFileName,
         detectedStartPage: input.startPage,
@@ -141,9 +206,11 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         importedAt: timestamp,
         approvedCount: input.donors.length,
         importedCount: imported.length,
+        replacedCount: replacements.length,
         skippedCount: skippedDuplicateNumbers.length,
         warnings: input.warnings,
         duplicateDonorNumbers: skippedDuplicateNumbers,
+        replacedDonorNumbers,
         status: 'completed',
         outcome,
       })
@@ -151,12 +218,17 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
       return {
         importId,
         importedCount: imported.length,
+        replacedCount: replacements.length,
         skippedCount: skippedDuplicateNumbers.length,
+        replacedDonorNumbers,
         skippedDuplicateNumbers,
       }
     })
   } catch (error) {
-    const skippedDuplicateNumbers = uniqueNumbers(input.skippedDuplicateNumbers)
+    const skippedDuplicateNumbers = uniqueNumbers([
+      ...input.skippedDuplicateNumbers,
+      ...duplicateDonorsWithinInput,
+    ])
     try {
       await store.write(`donorImports/${importId}`, {
         sourceFileName: input.sourceFileName,
@@ -172,9 +244,11 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         importedAt: store.timestamp(),
         approvedCount: input.donors.length,
         importedCount: 0,
+        replacedCount: 0,
         skippedCount: skippedDuplicateNumbers.length,
         warnings: input.warnings,
         duplicateDonorNumbers: skippedDuplicateNumbers,
+        replacedDonorNumbers: [],
         status: 'failed',
         outcome: 'import_failed',
       })
@@ -201,7 +275,7 @@ async function createFirestoreStore(): Promise<AtomicImportStore> {
       return runTransaction(database, (firestoreTransaction) => operation({
         async get(path) {
           const snapshot = await firestoreTransaction.get(doc(database, path))
-          return { exists: snapshot.exists() }
+          return { exists: snapshot.exists(), data: snapshot.data() }
         },
         set(path, data) {
           firestoreTransaction.set(doc(database, path), data)

@@ -101,11 +101,14 @@ export function PdfImport({
     () => analyzeReviewRows(rows, existingNumbers ?? new Set()),
     [existingNumbers, rows],
   )
-  const duplicateRows = reviewedRows.filter((row) => row.duplicateKind !== null)
-  const selectedRows = reviewedRows.filter((row) => row.selected && row.duplicateKind === null)
+  const withinFileDuplicateRows = reviewedRows.filter((row) => row.duplicateKind === 'within-file')
+  const replacementRows = reviewedRows.filter((row) => row.duplicateKind === 'existing')
+  const selectedRows = reviewedRows.filter((row) => row.selected && row.duplicateKind !== 'within-file')
   const invalidSelectedRows = selectedRows.filter((row) => Object.keys(row.errors).length > 0)
   const importableRows = selectedRows.filter((row) => Object.keys(row.errors).length === 0)
-  const selectableRows = reviewedRows.filter((row) => row.duplicateKind === null)
+  const importableNewRows = importableRows.filter((row) => row.duplicateKind === null)
+  const importableReplacementRows = importableRows.filter((row) => row.duplicateKind === 'existing')
+  const selectableRows = reviewedRows.filter((row) => row.duplicateKind !== 'within-file')
   const allSelected = selectableRows.length > 0 && selectableRows.every((row) => row.selected)
   const excludedCount = selectableRows.filter((row) => !row.selected).length
 
@@ -209,14 +212,14 @@ export function PdfImport({
 
   function toggleAll() {
     const nextSelected = !allSelected
-    setRows((current) => current.map((row, index) => reviewedRows[index]?.duplicateKind
+    setRows((current) => current.map((row, index) => reviewedRows[index]?.duplicateKind === 'within-file'
       ? row
       : { ...row, selected: nextSelected }))
   }
 
   async function approveImport() {
     if (!file || !result || !extraction || !existingNumbers || activeOperation) return
-    if (invalidSelectedRows.length > 0 || (importableRows.length === 0 && duplicateRows.length === 0) || importableRows.length > MAX_DONORS_PER_IMPORT) return
+    if (invalidSelectedRows.length > 0 || importableRows.length === 0 || importableRows.length > MAX_DONORS_PER_IMPORT) return
     setIsImporting(true)
     setError(null)
     try {
@@ -233,11 +236,11 @@ export function PdfImport({
         adminEmail,
         warnings: extraction.warnings,
         donors: importableRows.map((row) => row.donor),
-        skippedDuplicateNumbers: duplicateRows.map((row) => row.donor.donorNumber),
+        skippedDuplicateNumbers: withinFileDuplicateRows.map((row) => row.donor.donorNumber),
       })
       setImportResult(nextResult)
     } catch {
-      setError('שמירת הייבוא נכשלה. אף תורם לא נוסף. בדקו את החיבור ונסו שוב.')
+      setError('שמירת הייבוא נכשלה. לא נשמרו שינויים. בדקו את החיבור ונסו שוב.')
     } finally {
       setIsImporting(false)
     }
@@ -245,7 +248,7 @@ export function PdfImport({
 
   const approvalDisabled = existingNumbers === null
     || invalidSelectedRows.length > 0
-    || (importableRows.length === 0 && duplicateRows.length === 0)
+    || importableRows.length === 0
     || importableRows.length > MAX_DONORS_PER_IMPORT
     || activeOperation
 
@@ -373,22 +376,31 @@ export function PdfImport({
           )}
 
           <div className="review-summary" aria-live="polite">
-            <span><strong>{importableRows.length}</strong> מוכנים לייבוא</span>
+            <span><strong>{importableNewRows.length}</strong> חדשים לייבוא</span>
+            <span><strong>{importableReplacementRows.length}</strong> יחליפו קיימים</span>
             <span><strong>{invalidSelectedRows.length}</strong> דורשים תיקון</span>
-            <span><strong>{duplicateRows.length}</strong> כפולים שיידלגו</span>
+            <span><strong>{withinFileDuplicateRows.length}</strong> כפולים בקובץ שיידלגו</span>
             <span><strong>{excludedCount}</strong> הוחרגו ידנית</span>
           </div>
 
-          {duplicateRows.length > 0 && (
+          {replacementRows.length > 0 && (
             <div className="duplicate-notice" role="status">
-              <strong>כפילויות לא ייובאו</strong>
-              <p>{duplicateRows.map((row) => row.donor.donorNumber || `שורה ${Number(row.id.replace('row-', ''))}`).join('، ')}</p>
-              <small>המערכת מדלגת כברירת מחדל על מספרים כפולים בקובץ ועל מספרים שכבר קיימים במאגר.</small>
+              <strong>רשומות קיימות יוחלפו בנתונים החדשים</strong>
+              <p>{replacementRows.map((row) => row.donor.donorNumber || `שורה ${Number(row.id.replace('row-', ''))}`).join('، ')}</p>
+              <small>ההחלפה מתבצעת באותה פעולה אטומית ושומרת על מספר תורם ייחודי.</small>
+            </div>
+          )}
+
+          {withinFileDuplicateRows.length > 0 && (
+            <div className="duplicate-notice" role="status">
+              <strong>כפילויות בתוך הקובץ לא ייובאו</strong>
+              <p>{withinFileDuplicateRows.map((row) => row.donor.donorNumber || `שורה ${Number(row.id.replace('row-', ''))}`).join('، ')}</p>
+              <small>השורה הראשונה לכל מספר תורם נשמרת; שורות חוזרות באותו קובץ מדולגות.</small>
             </div>
           )}
 
           {importableRows.length > MAX_DONORS_PER_IMPORT && (
-            <p className="inline-alert" role="alert">ניתן לייבא עד {MAX_DONORS_PER_IMPORT} תורמים חדשים בפעולה אחת. הסירו סימון משורות נוספות.</p>
+            <p className="inline-alert" role="alert">ניתן לשמור עד {MAX_DONORS_PER_IMPORT} תורמים בפעולה אחת, כולל החלפות. הסירו סימון משורות נוספות.</p>
           )}
           {error && <p className="inline-alert" role="alert">{error}</p>}
           {existingNumbers === null && (
@@ -409,16 +421,17 @@ export function PdfImport({
               </thead>
               <tbody>
                 {reviewedRows.map((row, index) => {
-                  const duplicateLabel = row.duplicateKind === 'existing' ? 'כבר קיים במאגר' : row.duplicateKind === 'within-file' ? 'כפול בקובץ' : null
+                  const isWithinFileDuplicate = row.duplicateKind === 'within-file'
+                  const replacesExisting = row.duplicateKind === 'existing'
                   const rowErrors = Object.values(row.errors)
                   return (
-                    <tr key={row.id} className={`${row.donor.geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''} ${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`}>
+                    <tr key={row.id} className={`${row.donor.geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''} ${isWithinFileDuplicate ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`}>
                       <td className="selection-cell">
                         <input
                           type="checkbox"
                           aria-label={`ייבוא שורה ${index + 1}`}
-                          checked={row.selected && !duplicateLabel}
-                          disabled={Boolean(duplicateLabel)}
+                          checked={row.selected && !isWithinFileDuplicate}
+                          disabled={isWithinFileDuplicate}
                           onChange={() => toggleRow(index)}
                         />
                       </td>
@@ -455,11 +468,12 @@ export function PdfImport({
                         </select>
                       </td>
                       <td className="row-status-cell">
-                        {duplicateLabel ? <span className="status-chip duplicate-chip">{duplicateLabel}</span>
+                        {isWithinFileDuplicate ? <span className="status-chip duplicate-chip">כפול בקובץ</span>
                           : rowErrors.length > 0 && row.selected ? (
                             <div className="row-errors" role="alert"><strong>נדרש תיקון</strong><ul>{rowErrors.map((message) => <li key={message}>{message}</li>)}</ul></div>
-                          ) : row.selected ? <span className="status-chip valid-chip">תקין</span>
-                            : <span className="status-chip excluded-chip">לא ייובא</span>}
+                          ) : !row.selected ? <span className="status-chip excluded-chip">לא ייובא</span>
+                            : replacesExisting ? <span className="status-chip replacement-chip">יחליף רשומה קיימת</span>
+                              : <span className="status-chip valid-chip">תקין</span>}
                       </td>
                     </tr>
                   )
@@ -470,26 +484,28 @@ export function PdfImport({
 
           <div className="mobile-review-list" aria-label="שורות תורמים לבדיקה">
             {reviewedRows.map((row, index) => {
-              const duplicateLabel = row.duplicateKind === 'existing' ? 'כבר קיים' : row.duplicateKind === 'within-file' ? 'כפול בקובץ' : null
+              const isWithinFileDuplicate = row.duplicateKind === 'within-file'
+              const replacesExisting = row.duplicateKind === 'existing'
               const rowErrors = Object.values(row.errors)
               return (
-                <article className={`mobile-review-card ${row.donor.geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''} ${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`} key={`mobile-${row.id}`}>
+                <article className={`mobile-review-card ${row.donor.geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''} ${isWithinFileDuplicate ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`} key={`mobile-${row.id}`}>
                   <div className="mobile-review-card-header">
                     <input
                       type="checkbox"
                       aria-label={`ייבוא שורה ${index + 1} בנייד`}
-                      checked={row.selected && !duplicateLabel}
-                      disabled={Boolean(duplicateLabel)}
+                      checked={row.selected && !isWithinFileDuplicate}
+                      disabled={isWithinFileDuplicate}
                       onChange={() => toggleRow(index)}
                     />
                     <div>
                       <strong>{row.donor.donorNumber || `שורה ${index + 1}`}</strong>
                       <span>{row.donor.occupation || 'עיסוק לא צוין'} · {row.donor.origin || 'מוצא לא צוין'}</span>
                     </div>
-                    {duplicateLabel ? <span className="status-chip duplicate-chip">{duplicateLabel}</span>
+                    {isWithinFileDuplicate ? <span className="status-chip duplicate-chip">כפול בקובץ</span>
                       : rowErrors.length > 0 && row.selected ? <span className="status-chip error-chip">{rowErrors.length} שגיאות</span>
-                        : row.selected ? <span className="status-chip valid-chip">תקין</span>
-                          : <span className="status-chip excluded-chip">מוחרג</span>}
+                        : !row.selected ? <span className="status-chip excluded-chip">מוחרג</span>
+                          : replacesExisting ? <span className="status-chip replacement-chip">יחליף קיים</span>
+                            : <span className="status-chip valid-chip">תקין</span>}
                   </div>
                   <details>
                     <summary>פרטים ועריכה <span aria-hidden="true">⌄</span></summary>
@@ -519,8 +535,8 @@ export function PdfImport({
             <div>
               <button className="primary-button" type="button" disabled={approvalDisabled} onClick={() => void approveImport()}>
                 {isImporting ? 'שומר את הייבוא…' : importableRows.length > 0
-                  ? `אישור וייבוא ${importableRows.length} תורמים`
-                  : 'אישור וסיום — אין תורמים חדשים'}
+                  ? `אישור ושמירת ${importableRows.length} תורמים`
+                  : 'אין תורמים לשמירה'}
               </button>
               <button className="secondary-button" type="button" disabled={activeOperation} onClick={discardReview}>ביטול והשלכת החילוץ</button>
             </div>
@@ -541,7 +557,10 @@ export function PdfImport({
         <section className="import-success" role="status" aria-labelledby="import-success-title">
           <span className="success-mark" aria-hidden="true">✓</span>
           <h2 id="import-success-title">הייבוא הושלם בהצלחה</h2>
-          <p><strong>{importResult.importedCount}</strong> תורמים יובאו, <strong>{importResult.skippedCount}</strong> כפילויות דולגו.</p>
+          <p><strong>{importResult.importedCount}</strong> תורמים חדשים יובאו, <strong>{importResult.replacedCount}</strong> תורמים קיימים הוחלפו, <strong>{importResult.skippedCount}</strong> כפילויות בקובץ דולגו.</p>
+          {importResult.replacedDonorNumbers.length > 0 && (
+            <details><summary>הצגת מספרי התורמים שהוחלפו</summary><p dir="ltr">{importResult.replacedDonorNumbers.join(', ')}</p></details>
+          )}
           {importResult.skippedDuplicateNumbers.length > 0 && (
             <details><summary>הצגת מספרי התורמים שדולגו</summary><p dir="ltr">{importResult.skippedDuplicateNumbers.join(', ')}</p></details>
           )}

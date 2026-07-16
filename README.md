@@ -57,10 +57,13 @@ npm.cmd run firebase:deploy:firestore
 
 ### PDF imports and donor-number uniqueness
 
-Approved PDF rows are committed in one Firestore transaction. Each imported donor writes a
+Approved PDF rows are committed in one Firestore transaction. Each new donor writes a
 `donorNumberClaims` document keyed by the normalized donor number, and the same claim mechanism is
 used by manual donor creation. This prevents concurrent imports or manual additions from creating a
 second donor with the same number. Deleting a donor also removes its matching claim.
+When an approved PDF row matches an existing claim, the import updates that donor atomically in
+place and preserves its original creation metadata. Repeated numbers inside the same PDF remain
+ambiguous and are skipped after the first row.
 
 The importer first parses the stable catalog table locally from PDF text coordinates. If its strict
 header, column, or row confidence checks fail, it automatically falls back to the protected Gemini
@@ -71,7 +74,8 @@ list reconstruction, canonical Hebrew punctuation and comma spacing, empty-token
 duplicate removal. Semantic values are unrestricted; only malformed field structure is reported as a
 blocking, row-specific review error for manual correction. Every approval writes an admin-only `donorImports` audit document with the source file
 name, detected page range, extraction method, parser version, duration, fallback reason and Gemini
-model when used, administrator, timestamp, counts, warnings, duplicate numbers, status, and outcome.
+model when used, administrator, timestamp, imported/replaced/skipped counts and donor numbers,
+warnings, status, and outcome.
 Failed transactions make a best-effort `failed/import_failed` audit
 write without exposing diagnostic details. Imported donor documents reference a successful audit through `importId`.
 Three trailing asterisks in a source donor number are stored as `geneticCarrierStatus: "שלילי"`
@@ -80,7 +84,7 @@ are rendered without the marker and remain compatible with duplicate detection a
 Eye color and skin color are single-value fields: two-word values use a hyphen with no spaces, and
 commas are rejected. Comma-capable fields are normalized to no space before and exactly one space
 after every comma.
-The UI limits each approval to 249 new donors so donor documents, uniqueness claims, and the audit
+The UI limits each approval to 249 new or replacement donors so donor documents, uniqueness claims, and the audit
 record remain below Firestore's 500-write transaction limit.
 
 ## Google Stitch MCP

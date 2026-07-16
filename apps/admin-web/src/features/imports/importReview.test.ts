@@ -14,14 +14,15 @@ function donor(donorNumber: string, overrides: Partial<DonorInput> = {}): DonorI
 }
 
 describe('import review analysis', () => {
-  it('marks duplicates inside the file and in Firestore while retaining the first new row', () => {
+  it('skips duplicates inside the file and keeps Firestore duplicates eligible for replacement', () => {
     const reviewed = analyzeReviewRows(
       createReviewRows([donor('A 1'), donor(' a   1 '), donor('B-2')]),
       new Set(['b-2']),
     )
 
     expect(reviewed.map((row) => row.duplicateKind)).toEqual([null, 'within-file', 'existing'])
-    expect(selectedValidDonors(reviewed).map((row) => row.donorNumber)).toEqual(['A 1'])
+    expect(reviewed[2]?.eligible).toBe(true)
+    expect(selectedValidDonors(reviewed).map((row) => row.donorNumber)).toEqual(['A 1', 'B-2'])
   })
 
   it('returns row-specific errors for required clinical approval fields', () => {

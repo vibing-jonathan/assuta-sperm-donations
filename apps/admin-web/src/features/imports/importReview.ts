@@ -34,7 +34,7 @@ export function analyzeReviewRows(rows: ReviewRow[], existingNumbers: ReadonlySe
       ...row,
       duplicateKind,
       errors,
-      eligible: duplicateKind === null && Object.keys(errors).length === 0,
+      eligible: duplicateKind !== 'within-file' && Object.keys(errors).length === 0,
     }
   })
 }
