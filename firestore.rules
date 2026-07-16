@@ -14,7 +14,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
           'donorNumber', 'occupation', 'origin', 'religion', 'skinColor',
           'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
-          'createdAt', 'createdBy', 'updatedAt', 'updatedBy'
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'importId'
         ])
         && request.resource.data.keys().hasAll([
           'donorNumber', 'occupation', 'origin', 'religion', 'skinColor',
@@ -30,6 +30,8 @@ service cloud.firestore {
         && request.resource.data.eyeColor is string
         && request.resource.data.hairColor is string
         && request.resource.data.cmvIgg is string
+        && (!request.resource.data.keys().hasAny(['importId'])
+          || request.resource.data.importId is string)
         && (request.resource.data.heightMeters == null
           || (request.resource.data.heightMeters is number
             && request.resource.data.heightMeters >= 1
@@ -54,6 +56,76 @@ service cloud.firestore {
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.updatedAt == request.time
         && request.resource.data.updatedBy == request.auth.token.email;
+    }
+
+    match /donorNumberClaims/{claimId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'donorId', 'donorNumber', 'normalizedDonorNumber', 'createdAt', 'createdBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'donorId', 'donorNumber', 'normalizedDonorNumber', 'createdAt', 'createdBy'
+        ])
+        && request.resource.data.donorId is string
+        && request.resource.data.donorId.size() > 0
+        && request.resource.data.donorNumber is string
+        && request.resource.data.donorNumber.size() > 0
+        && request.resource.data.normalizedDonorNumber is string
+        && request.resource.data.normalizedDonorNumber.size() > 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
+    match /donorImports/{importId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'sourceFileName', 'detectedStartPage', 'detectedEndPage', 'detectedPageCount',
+          'geminiModel', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
+          'skippedCount', 'warnings', 'duplicateDonorNumbers', 'status', 'outcome'
+        ])
+        && request.resource.data.keys().hasAll([
+          'sourceFileName', 'detectedStartPage', 'detectedEndPage', 'detectedPageCount',
+          'geminiModel', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
+          'skippedCount', 'warnings', 'duplicateDonorNumbers', 'status', 'outcome'
+        ])
+        && request.resource.data.sourceFileName is string
+        && request.resource.data.sourceFileName.size() > 0
+        && request.resource.data.sourceFileName.size() <= 200
+        && request.resource.data.detectedStartPage is int
+        && request.resource.data.detectedStartPage >= 1
+        && request.resource.data.detectedEndPage is int
+        && request.resource.data.detectedEndPage >= request.resource.data.detectedStartPage
+        && request.resource.data.detectedPageCount is int
+        && request.resource.data.detectedPageCount == request.resource.data.detectedEndPage - request.resource.data.detectedStartPage + 1
+        && request.resource.data.geminiModel is string
+        && request.resource.data.importedBy == request.auth.token.email
+        && request.resource.data.importedAt == request.time
+        && request.resource.data.approvedCount is int
+        && request.resource.data.approvedCount >= 0
+        && request.resource.data.approvedCount <= 249
+        && request.resource.data.importedCount is int
+        && request.resource.data.importedCount >= 0
+        && request.resource.data.importedCount <= request.resource.data.approvedCount
+        && request.resource.data.skippedCount is int
+        && request.resource.data.skippedCount >= 0
+        && request.resource.data.warnings is list
+        && request.resource.data.warnings.size() <= 100
+        && request.resource.data.duplicateDonorNumbers is list
+        && request.resource.data.duplicateDonorNumbers.size() == request.resource.data.skippedCount
+        && (
+          (request.resource.data.status == 'completed'
+            && request.resource.data.outcome in [
+              'imported', 'imported_with_skips', 'duplicates_skipped'
+            ])
+          || (request.resource.data.status == 'failed'
+            && request.resource.data.outcome == 'import_failed'
+            && request.resource.data.importedCount == 0)
+        );
+      allow update, delete: if false;
     }
 
     match /{document=**} {

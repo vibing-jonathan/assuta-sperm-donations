@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { emptyDonorInput, validateDonor, type Donor, type DonorInput } from './donor'
-import { firestoreDonorRepository, type DonorRepository } from './donorRepository'
+import { DuplicateDonorNumberError, firestoreDonorRepository, type DonorRepository } from './donorRepository'
 
 interface DonorManagementProps {
   adminEmail: string
@@ -115,8 +115,10 @@ export function DonorManagement({
       await repository.add(form, adminEmail)
       setForm(emptyDonorInput)
       setIsFormOpen(false)
-    } catch {
-      setError('שמירת התורם נכשלה. בדקו את החיבור ונסו שוב.')
+    } catch (reason) {
+      setError(reason instanceof DuplicateDonorNumberError
+        ? 'מספר התורם כבר קיים במאגר.'
+        : 'שמירת התורם נכשלה. בדקו את החיבור ונסו שוב.')
     } finally {
       setIsSaving(false)
     }
@@ -126,7 +128,7 @@ export function DonorManagement({
     setIsDeleting(true)
     setError(null)
     try {
-      await repository.remove(donor.id)
+      await repository.remove(donor.id, donor.donorNumber)
       setDonorPendingDelete(null)
     } catch {
       setError('מחיקת התורם נכשלה. נסו שוב.')

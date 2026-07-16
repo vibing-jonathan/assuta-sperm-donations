@@ -63,6 +63,6 @@ describe('DonorManagement', () => {
     expect(repository.remove).not.toHaveBeenCalled()
     fireEvent.click(within(dialog).getByRole('button', { name: /מחיקת תורם/ }))
 
-    await waitFor(() => expect(repository.remove).toHaveBeenCalledWith('donor-1'))
+    await waitFor(() => expect(repository.remove).toHaveBeenCalledWith('donor-1', 'D-4922'))
   })
 })

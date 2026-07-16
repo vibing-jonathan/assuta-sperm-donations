@@ -30,7 +30,6 @@ function readErrorDiagnostics(error: unknown) {
     errorName: error.name,
     errorStatus: typeof apiError.status === 'number' ? apiError.status : undefined,
     errorCode: typeof apiError.code === 'string' || typeof apiError.code === 'number' ? apiError.code : undefined,
-    errorMessage: error.message.replace(/\s+/g, ' ').slice(0, 300),
   }
 }
 
@@ -78,13 +77,13 @@ export const extractDonorsFromPdf = onRequest({
   cors: true,
 }, async (request, response) => {
   if (request.method !== 'POST') {
-    response.status(405).json({ error: 'Method not allowed.' })
+    response.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
     return
   }
 
   const authorization = request.get('authorization')
   if (!authorization?.startsWith('Bearer ')) {
-    response.status(401).json({ error: 'Authentication is required.' })
+    response.status(401).json({ error: 'AUTHENTICATION_REQUIRED' })
     return
   }
 
@@ -92,13 +91,13 @@ export const extractDonorsFromPdf = onRequest({
   try {
     decodedToken = await getAuth().verifyIdToken(authorization.slice('Bearer '.length), true)
   } catch {
-    response.status(401).json({ error: 'Invalid authentication token.' })
+    response.status(401).json({ error: 'INVALID_AUTHENTICATION' })
     return
   }
 
   const adminEmail = getAllowedAdminEmail({ token: decodedToken })
   if (!adminEmail) {
-    response.status(403).json({ error: 'Verified administrator access is required.' })
+    response.status(403).json({ error: 'ADMIN_ACCESS_REQUIRED' })
     return
   }
 
@@ -106,7 +105,7 @@ export const extractDonorsFromPdf = onRequest({
   try {
     input = readExtractionRequest(request.body)
   } catch (error) {
-    response.status(400).json({ error: error instanceof Error ? error.message : 'Invalid extraction request.' })
+    response.status(400).json({ error: 'INVALID_EXTRACTION_REQUEST' })
     return
   }
   const ai = new GoogleGenAI({ apiKey: geminiApiKey.value() })
@@ -138,7 +137,6 @@ export const extractDonorsFromPdf = onRequest({
     const extracted = parseExtractionResponse(interaction.output_text)
     logger.info('Donor PDF extraction completed.', {
       adminEmail,
-      sourceFileName: input.sourceFileName,
       startPage: input.startPage,
       endPage: input.endPage,
       donorCount: extracted.donors.length,
@@ -148,10 +146,9 @@ export const extractDonorsFromPdf = onRequest({
   } catch (error) {
     logger.error('Donor PDF extraction failed.', {
       adminEmail,
-      sourceFileName: input.sourceFileName,
       extractionStage,
       ...readErrorDiagnostics(error),
     })
-    response.status(500).json({ error: 'Donor extraction failed. Please try again.' })
+    response.status(500).json({ error: 'EXTRACTION_FAILED' })
   }
 })

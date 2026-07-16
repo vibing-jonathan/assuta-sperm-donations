@@ -55,6 +55,20 @@ Deploy Firestore rules and indexes:
 npm.cmd run firebase:deploy:firestore
 ```
 
+### PDF imports and donor-number uniqueness
+
+Approved PDF rows are committed in one Firestore transaction. Each imported donor writes a
+`donorNumberClaims` document keyed by the normalized donor number, and the same claim mechanism is
+used by manual donor creation. This prevents concurrent imports or manual additions from creating a
+second donor with the same number. Deleting a donor also removes its matching claim.
+
+Every approval writes an admin-only `donorImports` audit document with the source file
+name, detected page range, Gemini model, administrator, timestamp, counts, warnings, duplicate
+numbers, status, and outcome. Failed transactions make a best-effort `failed/import_failed` audit
+write without exposing diagnostic details. Imported donor documents reference a successful audit through `importId`.
+The UI limits each approval to 249 new donors so donor documents, uniqueness claims, and the audit
+record remain below Firestore's 500-write transaction limit.
+
 ## Google Stitch MCP
 
 The repository configures Stitch in `.codex/config.toml` without storing its API key. `STITCH_API_KEY` must be present in the operating-system environment that launches Codex; a project `.env` file is not automatically loaded by the MCP host. Restart Codex after setting it.
