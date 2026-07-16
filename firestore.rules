@@ -105,7 +105,7 @@ service cloud.firestore {
         && request.resource.data.detectedPageCount == request.resource.data.detectedEndPage - request.resource.data.detectedStartPage + 1
         && (request.resource.data.geminiModel == null
           || request.resource.data.geminiModel is string)
-        && request.resource.data.extractionMethod in ['deterministic', 'gemini-fallback']
+        && request.resource.data.extractionMethod in ['deterministic', 'gemini-fallback', 'gemini-forced']
         && request.resource.data.parserVersion is string
         && request.resource.data.parserVersion.size() > 0
         && request.resource.data.parserVersion.size() <= 100
@@ -123,6 +123,10 @@ service cloud.firestore {
             && request.resource.data.geminiModel is string
             && request.resource.data.geminiModel.size() > 0
             && request.resource.data.fallbackReason != null)
+          || (request.resource.data.extractionMethod == 'gemini-forced'
+            && request.resource.data.geminiModel is string
+            && request.resource.data.geminiModel.size() > 0
+            && request.resource.data.fallbackReason == null)
         )
         && request.resource.data.importedBy == request.auth.token.email
         && request.resource.data.importedAt == request.time

@@ -11,7 +11,7 @@ import {
 import { analyzeReviewRows, createReviewRows, type ReviewRow } from './importReview'
 import { MAX_PDF_BYTES, scanDonorPdf, type PdfScanResult } from './scanDonorPdf'
 
-type ExtractionPhase = 'deterministic' | 'gemini-fallback'
+type ExtractionPhase = 'deterministic' | 'gemini-fallback' | 'gemini-forced'
 
 export interface PdfImportProps {
   adminEmail: string
@@ -68,6 +68,7 @@ export function PdfImport({
   const [isScanning, setIsScanning] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionPhase, setExtractionPhase] = useState<ExtractionPhase>('deterministic')
+  const [forceGemini, setForceGemini] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
   const [rows, setRows] = useState<ReviewRow[]>([])
@@ -162,9 +163,10 @@ export function PdfImport({
     setExistingNumbers(null)
     setImportResult(null)
     setError(null)
-    setExtractionPhase('deterministic')
+    setExtractionPhase(forceGemini ? 'gemini-forced' : 'deterministic')
     try {
       const nextExtraction = await extractPdf(file, result, {
+        forceGemini,
         onFallback: () => setExtractionPhase('gemini-fallback'),
       })
       setExtraction(nextExtraction)
@@ -301,6 +303,18 @@ export function PdfImport({
                     <span>עמודים {result.startPage}–{result.endPage}</span>
                     <small>{result.pageCount} עמודים מתוך {result.totalPages} יועברו לחילוץ</small>
                     <p className="extraction-duration">חילוץ מקומי נמשך בדרך כלל מספר שניות. רק אם המבנה השתנה, Gemini יופעל והתהליך עשוי להימשך 1–2 דקות.</p>
+                    <label className="force-gemini-option">
+                      <input
+                        type="checkbox"
+                        checked={forceGemini}
+                        disabled={activeOperation}
+                        onChange={(event) => setForceGemini(event.target.checked)}
+                      />
+                      <span>
+                        <strong>חילוץ ישירות עם Gemini</strong>
+                        <small>דלגו על החילוץ המקומי. התהליך נמשך בדרך כלל 1–2 דקות.</small>
+                      </span>
+                    </label>
                     <button className="primary-button" type="button" disabled={activeOperation} onClick={() => void runExtraction()}>
                       חילוץ נתונים
                     </button>
@@ -317,7 +331,11 @@ export function PdfImport({
         <section className="processing-panel" role="status" aria-live="polite" aria-busy="true">
           <span className="processing-spinner" aria-hidden="true" />
           <div>
-            <h2>{extractionPhase === 'deterministic' ? 'קורא את טבלת התורמים באופן מקומי' : 'מבנה הטבלה השתנה — עוברים לחילוץ עם Gemini'}</h2>
+            <h2>{extractionPhase === 'deterministic'
+              ? 'קורא את טבלת התורמים באופן מקומי'
+              : extractionPhase === 'gemini-forced'
+                ? 'מחלץ את הנתונים ישירות עם Gemini'
+                : 'מבנה הטבלה השתנה — עוברים לחילוץ עם Gemini'}</h2>
             <p>{extractionPhase === 'deterministic'
               ? 'החילוץ המקומי נמשך בדרך כלל מספר שניות. יש להשאיר את העמוד פתוח עד לסיום.'
               : 'Gemini נמשך בדרך כלל 1–2 דקות. יש להשאיר את העמוד פתוח ולא להחליף את הקובץ.'}</p>
@@ -335,7 +353,9 @@ export function PdfImport({
               <p>ערכו שדות שדורשים תיקון, הסירו סימון משורות שלא לייבא ואשרו רק לאחר בדיקה.</p>
             </div>
             <div className="extraction-method">
-              <strong>{extraction.extractionMethod === 'deterministic' ? 'חילוץ מקומי' : 'Gemini הופעל כגיבוי'}</strong>
+              <strong>{extraction.extractionMethod === 'deterministic'
+                ? 'חילוץ מקומי'
+                : extraction.extractionMethod === 'gemini-forced' ? 'חילוץ ישיר עם Gemini' : 'Gemini הופעל כגיבוי'}</strong>
               <small dir="ltr">{extraction.extractionMethod === 'deterministic' ? extraction.parserVersion : extraction.model}</small>
             </div>
           </div>

@@ -96,6 +96,25 @@ describe('atomic donor import', () => {
     })
   })
 
+  it('records a forced Gemini extraction with no fallback reason', async () => {
+    const { store, committed } = fakeStore()
+    await executeAtomicImport(store, {
+      ...context,
+      model: 'gemini-test',
+      extractionMethod: 'gemini-forced',
+      extractionDurationMs: 71_200,
+      fallbackReason: null,
+      donors: [donor('A-3')],
+      skippedDuplicateNumbers: [],
+    })
+
+    const audit = [...committed.entries()].find(([path]) => path.startsWith('donorImports/'))?.[1]
+    expect(audit).toMatchObject({
+      extractionMethod: 'gemini-forced', geminiModel: 'gemini-test',
+      extractionDurationMs: 71_200, fallbackReason: null,
+    })
+  })
+
   it('rejects imports that could exceed the Firestore 500-write limit before starting a transaction', async () => {
     const { store, committed } = fakeStore()
     await expect(executeAtomicImport(store, {

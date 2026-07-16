@@ -95,6 +95,31 @@ describe('PDF import approval workflow', () => {
     expect(screen.getByText(/Gemini נמשך בדרך כלל 1–2 דקות/)).toBeInTheDocument()
   })
 
+  it('lets an administrator force Gemini and skips the local extraction phase', async () => {
+    const extractPdf = vi.fn((_file: File, _range: PdfScanResult): Promise<ExtractionResult> => new Promise(() => undefined))
+    const { container } = render(
+      <PdfImport
+        adminEmail="jgabbayj@gmail.com"
+        repository={repository()}
+        scanPdf={vi.fn().mockResolvedValue(scanResult)}
+        extractPdf={extractPdf}
+      />,
+    )
+
+    upload(container)
+    const forceGemini = await screen.findByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ })
+    fireEvent.click(forceGemini)
+    fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
+
+    expect(extractPdf).toHaveBeenCalledWith(
+      expect.any(File),
+      scanResult,
+      expect.objectContaining({ forceGemini: true }),
+    )
+    expect(await screen.findByRole('heading', { name: 'מחלץ את הנתונים ישירות עם Gemini' })).toBeInTheDocument()
+    expect(screen.getByText(/Gemini נמשך בדרך כלל 1–2 דקות/)).toBeInTheDocument()
+  })
+
   it('supports editing, selection, row validation, duplicate skipping, audit input, and success state', async () => {
     const importApproved = vi.fn().mockResolvedValue({
       importId: 'import-1', importedCount: 1, skippedCount: 2,

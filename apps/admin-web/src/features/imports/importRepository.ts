@@ -10,7 +10,7 @@ export interface ImportAuditContext {
   endPage: number
   pageCount: number
   model: string
-  extractionMethod: 'deterministic' | 'gemini-fallback'
+  extractionMethod: 'deterministic' | 'gemini-fallback' | 'gemini-forced'
   parserVersion: string
   extractionDurationMs: number
   fallbackReason: DeterministicFallbackReason | null
@@ -116,7 +116,7 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         detectedStartPage: input.startPage,
         detectedEndPage: input.endPage,
         detectedPageCount: input.pageCount,
-        geminiModel: input.extractionMethod === 'gemini-fallback' ? input.model : null,
+        geminiModel: input.extractionMethod === 'deterministic' ? null : input.model,
         extractionMethod: input.extractionMethod,
         parserVersion: input.parserVersion,
         extractionDurationMs: input.extractionDurationMs,
@@ -147,7 +147,7 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
         detectedStartPage: input.startPage,
         detectedEndPage: input.endPage,
         detectedPageCount: input.pageCount,
-        geminiModel: input.extractionMethod === 'gemini-fallback' ? input.model : null,
+        geminiModel: input.extractionMethod === 'deterministic' ? null : input.model,
         extractionMethod: input.extractionMethod,
         parserVersion: input.parserVersion,
         extractionDurationMs: input.extractionDurationMs,

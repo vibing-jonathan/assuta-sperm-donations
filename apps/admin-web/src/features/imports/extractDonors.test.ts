@@ -70,6 +70,26 @@ describe('hybrid extraction orchestration', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
+  it('bypasses the deterministic parser when Gemini is explicitly forced', async () => {
+    vi.mocked(extractDonorsDeterministically).mockResolvedValue({ donors: [donor], warnings: [] })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ donors: [donor], warnings: [], model: 'gemini-test' }),
+    }))
+
+    const result = await extractDonors(
+      new File(['fixture'], 'fixture.pdf'),
+      range,
+      { forceGemini: true },
+    )
+
+    expect(extractDonorsDeterministically).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      extractionMethod: 'gemini-forced', parserVersion: 'donor-table-v2',
+      fallbackReason: null, model: 'gemini-test', donors: [donor],
+    })
+  })
+
   it('calls Gemini once and records the safe structural fallback reason when confidence fails', async () => {
     vi.mocked(extractDonorsDeterministically).mockRejectedValue(
       new DeterministicExtractionFailure('columns_ambiguous'),

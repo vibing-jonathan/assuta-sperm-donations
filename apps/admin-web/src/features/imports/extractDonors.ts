@@ -20,7 +20,7 @@ export interface ExtractionResult {
   donors: DonorInput[]
   warnings: string[]
   model: string
-  extractionMethod: 'deterministic' | 'gemini-fallback'
+  extractionMethod: 'deterministic' | 'gemini-fallback' | 'gemini-forced'
   parserVersion: string
   extractionDurationMs: number
   fallbackReason: DeterministicFallbackReason | null
@@ -34,6 +34,7 @@ interface GeminiExtractionResponse {
 
 export interface HybridExtractionOptions {
   onFallback?: (reason: DeterministicFallbackReason) => void
+  forceGemini?: boolean
 }
 
 export const extractionErrorMessages = {
@@ -111,6 +112,18 @@ export async function extractDonors(
   options: HybridExtractionOptions = {},
 ): Promise<ExtractionResult> {
   const startedAt = Date.now()
+  if (options.forceGemini) {
+    const extracted = await extractDonorsWithGemini(file, range)
+    return {
+      ...extracted,
+      donors: extracted.donors.map(normalizeExtractedDonor),
+      extractionMethod: 'gemini-forced',
+      parserVersion: DETERMINISTIC_PARSER_VERSION,
+      extractionDurationMs: Date.now() - startedAt,
+      fallbackReason: null,
+    }
+  }
+
   try {
     const extracted = await extractDonorsDeterministically(file, range)
     return {
