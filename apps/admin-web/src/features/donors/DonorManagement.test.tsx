@@ -48,6 +48,32 @@ describe('DonorManagement', () => {
     ))
   })
 
+  it('normalizes comma spacing and rejects multiple skin-color values in manual entry', async () => {
+    const repository = createRepository()
+    render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'הוספת תורם' }))
+    fireEvent.change(screen.getByLabelText(/מס׳ תורם/), { target: { value: 'D-400' } })
+    fireEvent.change(screen.getByLabelText('עיסוק'), { target: { value: 'רופא ,חוקר' } })
+    fireEvent.change(screen.getByLabelText('מוצא'), { target: { value: 'רוסיה ,רומניה' } })
+    fireEvent.change(screen.getByLabelText('צבע עור'), { target: { value: 'בהיר, משתזף' } })
+    fireEvent.click(screen.getByRole('button', { name: 'שמירת תורם' }))
+
+    expect(await screen.findAllByText('השדה צבע עור מכיל ערך אחד בלבד; אין להשתמש בפסיקים.')).toHaveLength(2)
+    expect(repository.add).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('צבע עור'), { target: { value: 'בהיר משתזף' } })
+    fireEvent.click(screen.getByRole('button', { name: 'שמירת תורם' }))
+
+    await waitFor(() => expect(repository.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        donorNumber: 'D-400', occupation: 'רופא, חוקר', origin: 'רוסיה, רומניה',
+        skinColor: 'בהיר-משתזף',
+      }),
+      'admin@example.com',
+    ))
+  })
+
   it('shows the empty database state', async () => {
     render(<DonorManagement adminEmail="admin@example.com" repository={createRepository()} />)
     expect(await screen.findByText('עדיין אין תורמים במאגר')).toBeInTheDocument()

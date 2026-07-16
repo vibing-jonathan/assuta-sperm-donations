@@ -36,6 +36,11 @@ export const emptyDonorInput: DonorInput = {
 
 export function validateDonor(input: DonorInput) {
   if (!input.donorNumber.trim()) return 'יש להזין מספר תורם.'
+  const listFields: DonorListField[] = ['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor']
+  for (const field of listFields) {
+    const fieldError = verifyListField(field, input[field])
+    if (fieldError) return fieldError
+  }
   if (input.heightMeters !== null && (input.heightMeters < 1 || input.heightMeters > 2.5)) {
     return 'הגובה חייב להיות בין 1 ל-2.5 מטר.'
   }
@@ -72,8 +77,8 @@ export function validateImportDonor(input: DonorInput): DonorValidationErrors {
   else if (donorNumber.length > 100) errors.donorNumber = 'מספר התורם ארוך מדי (עד 100 תווים).'
 
   if (input.occupation.length > 200) errors.occupation = 'שדה העיסוק ארוך מדי (עד 200 תווים).'
-  const listFields: DonorListField[] = ['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor']
-  for (const field of listFields) {
+  const importListFields: DonorListField[] = ['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor']
+  for (const field of importListFields) {
     const fieldError = verifyListField(field, input[field])
     if (fieldError) errors[field] = fieldError
   }

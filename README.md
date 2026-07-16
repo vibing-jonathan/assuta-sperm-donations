@@ -78,6 +78,9 @@ write without exposing diagnostic details. Imported donor documents reference a 
 Three trailing asterisks in a source donor number are stored as `geneticCarrierStatus: "שלילי"`
 and removed from the donor number; unmarked numbers are stored as `"חיובי"`. Legacy starred records
 are rendered without the marker and remain compatible with duplicate detection and deletion.
+Eye color and skin color are single-value fields: two-word values use a hyphen with no spaces, and
+commas are rejected. Comma-capable fields are normalized to no space before and exactly one space
+after every comma.
 The UI limits each approval to 249 new donors so donor documents, uniqueness claims, and the audit
 record remain below Firestore's 500-write transaction limit.
 

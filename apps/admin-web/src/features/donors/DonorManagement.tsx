@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { emptyDonorInput, validateDonor, type Donor, type DonorInput } from './donor'
-import { displayedDonorMetadata, parseDonorNumberMetadata } from './donorNumberMetadata'
+import {
+  normalizeEditableTextField,
+  normalizeExtractedDonor,
+  type DonorListField,
+} from './donorFieldRules'
+import { displayedDonorMetadata } from './donorNumberMetadata'
 import { DuplicateDonorNumberError, firestoreDonorRepository, type DonorRepository } from './donorRepository'
 
 interface DonorManagementProps {
@@ -9,7 +14,9 @@ interface DonorManagementProps {
   repository?: DonorRepository
 }
 
-const textFields: Array<{ key: keyof DonorInput; label: string; placeholder?: string }> = [
+type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
+
+const textFields: Array<{ key: EditableTextField; label: string; placeholder?: string }> = [
   { key: 'donorNumber', label: 'מס׳ תורם', placeholder: 'לדוגמה: D-5000' },
   { key: 'occupation', label: 'עיסוק' },
   { key: 'origin', label: 'מוצא' },
@@ -104,7 +111,7 @@ export function DonorManagement({
 
   async function submitDonor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const normalizedForm = { ...form, ...parseDonorNumberMetadata(form.donorNumber) }
+    const normalizedForm = normalizeExtractedDonor(form)
     const validationError = validateDonor(normalizedForm)
     if (validationError) {
       setError(validationError)
@@ -303,6 +310,7 @@ export function DonorManagement({
                       value={String(form[key] ?? '')}
                       placeholder={placeholder}
                       onChange={(event) => updateTextField(key, event.target.value)}
+                      onBlur={(event) => updateTextField(key, normalizeEditableTextField(key, event.target.value))}
                     />
                   </label>
                 ))}

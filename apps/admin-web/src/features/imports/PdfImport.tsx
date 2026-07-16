@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 
 import type { DonorInput } from '../donors/donor'
+import { normalizeEditableTextField, type DonorListField } from '../donors/donorFieldRules'
 import { extractDonors, type ExtractionResult } from './extractDonors'
 import {
   firestoreImportRepository,
@@ -22,7 +23,9 @@ export interface PdfImportProps {
   extractPdf?: typeof extractDonors
 }
 
-const editableTextFields: Array<{ key: keyof DonorInput; label: string }> = [
+type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
+
+const editableTextFields: Array<{ key: EditableTextField; label: string }> = [
   { key: 'donorNumber', label: 'מס׳ תורם' },
   { key: 'occupation', label: 'עיסוק' },
   { key: 'origin', label: 'מוצא' },
@@ -429,6 +432,7 @@ export function PdfImport({
                               aria-invalid={Boolean(fieldError)}
                               title={fieldError}
                               onChange={(event) => updateRow(index, key, event.target.value)}
+                              onBlur={(event) => updateRow(index, key, normalizeEditableTextField(key, event.target.value))}
                             />
                           </td>
                         )
@@ -493,7 +497,7 @@ export function PdfImport({
                         return (
                           <label className={key === 'donorNumber' ? 'full-mobile-field' : undefined} key={key}>
                             <span>{label}</span>
-                            <input value={String(row.donor[key] ?? '')} aria-invalid={Boolean(fieldError)} onChange={(event) => updateRow(index, key, event.target.value)} />
+                            <input value={String(row.donor[key] ?? '')} aria-invalid={Boolean(fieldError)} onChange={(event) => updateRow(index, key, event.target.value)} onBlur={(event) => updateRow(index, key, normalizeEditableTextField(key, event.target.value))} />
                             {fieldError && <small>{fieldError}</small>}
                           </label>
                         )

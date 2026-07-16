@@ -43,9 +43,21 @@ describe('import review analysis', () => {
     ]), new Set())
 
     expect(row?.errors).toMatchObject({
-      origin: 'יש להוסיף רווח אחרי כל פסיק בשדה מוצא.',
+      origin: 'יש להוסיף רווח אחד אחרי כל פסיק בשדה מוצא.',
       religion: 'השדה דת מכיל ערכים כפולים.',
     })
+  })
+
+  it('rejects comma-separated or space-separated eye and skin values', () => {
+    const [row] = analyzeReviewRows(createReviewRows([
+      donor('A-5', { skinColor: 'בהיר, משתזף', eyeColor: 'חום בהיר' }),
+    ]), new Set())
+
+    expect(row?.errors).toMatchObject({
+      skinColor: 'השדה צבע עור מכיל ערך אחד בלבד; אין להשתמש בפסיקים.',
+      eyeColor: 'יש להפריד מילים בשדה צבע עיניים באמצעות מקף, ללא רווחים.',
+    })
+    expect(row?.eligible).toBe(false)
   })
 
   it('marks unknown semantic values as ineligible until manually corrected', () => {

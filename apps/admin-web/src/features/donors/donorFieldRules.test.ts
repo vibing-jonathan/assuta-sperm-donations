@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { normalizeExtractedDonor, normalizeListField, verifyListField } from './donorFieldRules'
+import {
+  normalizeCommaSpacing,
+  normalizeExtractedDonor,
+  normalizeListField,
+  verifyListField,
+} from './donorFieldRules'
 
 describe('donor field normalization rules', () => {
   it('repairs missing origin delimiters, canonicalizes aliases, and removes semantic duplicates', () => {
@@ -9,6 +14,7 @@ describe('donor field normalization rules', () => {
 
   it('normalizes Hebrew quotation spacing and comma spacing', () => {
     expect(normalizeListField('origin', 'ארה " ב,פולין, מצרים')).toBe('ארה"ב, פולין, מצרים')
+    expect(normalizeCommaSpacing('רוסיה ,רומניה ,  בלרוס')).toBe('רוסיה, רומניה, בלרוס')
   })
 
   it('drops empty list values and repeated delimiters', () => {
@@ -18,12 +24,12 @@ describe('donor field normalization rules', () => {
   it('normalizes every extracted list field while leaving occupation semantics intact', () => {
     const normalized = normalizeExtractedDonor({
       donorNumber: '  D-1  ', occupation: 'מנהל  פרויקטים',
-      origin: 'רומניה בלרוס', religion: ',יהודי', skinColor: 'בהיר,בהיר',
+      origin: 'רומניה בלרוס', religion: ',יהודי', skinColor: 'בהיר משתזף',
       eyeColor: 'חום', hairColor: 'חום', cmvIgg: 'negative',
     })
     expect(normalized).toMatchObject({
       donorNumber: 'D-1', occupation: 'מנהל פרויקטים', origin: 'רומניה, בלרוס',
-      geneticCarrierStatus: 'חיובי', religion: 'יהודי', skinColor: 'בהיר', cmvIgg: 'שלילי',
+      geneticCarrierStatus: 'חיובי', religion: 'יהודי', skinColor: 'בהיר-משתזף', cmvIgg: 'שלילי',
     })
   })
 
@@ -40,8 +46,23 @@ describe('donor field normalization rules', () => {
   })
 
   it('returns field-specific review errors for manually entered malformed values', () => {
-    expect(verifyListField('origin', 'רוסיה,רומניה')).toBe('יש להוסיף רווח אחרי כל פסיק בשדה מוצא.')
+    expect(verifyListField('origin', 'רוסיה,רומניה')).toBe('יש להוסיף רווח אחד אחרי כל פסיק בשדה מוצא.')
+    expect(verifyListField('origin', 'רוסיה , רומניה')).toBe('יש להסיר רווח לפני כל פסיק בשדה מוצא.')
+    expect(verifyListField('origin', 'רוסיה,  רומניה')).toBe('יש להשאיר רווח אחד בלבד אחרי כל פסיק בשדה מוצא.')
     expect(verifyListField('religion', 'יהודי, יהודי')).toBe('השדה דת מכיל ערכים כפולים.')
+  })
+
+  it('allows one hyphenated eye or skin value and rejects commas or spaces', () => {
+    expect(normalizeListField('skinColor', 'בהיר משתזף')).toBe('בהיר-משתזף')
+    expect(normalizeListField('eyeColor', 'חום בהיר')).toBe('חום-בהיר')
+    expect(verifyListField('skinColor', 'בהיר-משתזף')).toBeNull()
+    expect(verifyListField('eyeColor', 'חום-בהיר')).toBeNull()
+    expect(verifyListField('skinColor', 'בהיר, משתזף')).toBe(
+      'השדה צבע עור מכיל ערך אחד בלבד; אין להשתמש בפסיקים.',
+    )
+    expect(verifyListField('eyeColor', 'חום בהיר')).toBe(
+      'יש להפריד מילים בשדה צבע עיניים באמצעות מקף, ללא רווחים.',
+    )
   })
 
   it('requires manual review for semantic values outside the controlled vocabulary', () => {

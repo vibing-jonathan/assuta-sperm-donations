@@ -15,6 +15,7 @@ interface NormalizableDonorFields {
 }
 
 const listFields: DonorListField[] = ['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor']
+const singleValueFields = new Set<DonorListField>(['skinColor', 'eyeColor'])
 
 const originValues = [
   'ישראל', 'רוסיה', 'רומניה', 'בלרוס', 'ארה"ב', 'ארצות הברית', 'פולין', 'מצרים',
@@ -27,8 +28,8 @@ const originValues = [
 ]
 
 const religionValues = ['יהודי', 'נוצרי', 'מוסלמי', 'דרוזי', 'בהאי', 'ללא דת', 'אתאיסט', 'אחר']
-const skinValues = ['בהיר', 'כהה', 'שחום', 'בינוני', 'לבן', 'שחור', 'זית']
-const eyeValues = ['חום', 'כחול', 'ירוק', 'אפור', 'שחור', 'דבש', 'לוז', 'חום בהיר', 'חום כהה', 'כחול-ירוק', 'ירוק-חום']
+const skinValues = ['בהיר', 'כהה', 'שחום', 'בינוני', 'לבן', 'שחור', 'זית', 'בהיר-משתזף']
+const eyeValues = ['חום', 'כחול', 'ירוק', 'אפור', 'שחור', 'דבש', 'לוז', 'חום-בהיר', 'חום-כהה', 'כחול-ירוק', 'ירוק-חום']
 const hairValues = ['שחור', 'חום', 'בלונדיני', 'ג\'ינג\'י', 'שטני', 'אפור', 'חלק', 'גלי', 'מתולתל', 'קצר', 'ארוך', 'חום בהיר', 'חום כהה']
 
 const valuesByField: Record<DonorListField, string[]> = {
@@ -54,6 +55,10 @@ function normalizeQuotes(value: string) {
     .replace(/[‘’׳]/g, "'")
     .replace(/\s*"\s*/g, '"')
     .replace(/\s*'\s*/g, "'")
+}
+
+export function normalizeCommaSpacing(value: string) {
+  return value.split(',').map((part) => part.trim()).join(', ')
 }
 
 function comparisonKey(value: string) {
@@ -114,16 +119,24 @@ function mergeKnownPhraseTokens(field: DonorListField, tokens: string[]) {
 }
 
 export function normalizeListField(field: DonorListField, value: string) {
-  const punctuationNormalized = normalizeQuotes(value)
+  const punctuationNormalized = normalizeCommaSpacing(normalizeQuotes(value)
     .replace(/[;|\n]+/g, ',')
-    .replace(/\s*,\s*/g, ',')
     .replace(/,+/g, ',')
     .replace(/^,|,$/g, '')
     .replace(/\s+/g, ' ')
-    .trim()
+    .trim())
   if (!punctuationNormalized) return ''
 
   const { byKey } = vocabulary(field)
+  if (singleValueFields.has(field)) {
+    const hyphenNormalized = punctuationNormalized.replace(/\s*-\s*/g, '-')
+    if (hyphenNormalized.includes(',')) return hyphenNormalized
+    const canonical = byKey.get(comparisonKey(hyphenNormalized))
+    if (canonical) return canonical
+    const words = hyphenNormalized.split(/\s+/).filter(Boolean)
+    return words.length === 2 ? words.join('-') : hyphenNormalized
+  }
+
   const initialTokens = punctuationNormalized.split(',').map((token) => token.trim()).filter(Boolean)
   const mergedTokens = mergeKnownPhraseTokens(field, initialTokens)
   const canonicalTokens = mergedTokens.flatMap((token) => splitKnownSequence(field, token))
@@ -138,10 +151,10 @@ export function normalizeListField(field: DonorListField, value: string) {
 
 export function normalizeExtractedDonor<T extends NormalizableDonorFields>(input: T): T & { geneticCarrierStatus: GeneticCarrierStatus } {
   const normalized = { ...input } as T & { geneticCarrierStatus: GeneticCarrierStatus }
-  const donorMetadata = parseDonorNumberMetadata(normalizeQuotes(input.donorNumber))
+  const donorMetadata = parseDonorNumberMetadata(normalizeCommaSpacing(normalizeQuotes(input.donorNumber)))
   normalized.donorNumber = donorMetadata.donorNumber
   normalized.geneticCarrierStatus = donorMetadata.geneticCarrierStatus
-  normalized.occupation = normalizeQuotes(input.occupation).replace(/\s+/g, ' ').trim()
+  normalized.occupation = normalizeCommaSpacing(normalizeQuotes(input.occupation).replace(/\s+/g, ' ').trim())
   for (const field of listFields) normalized[field] = normalizeListField(field, input[field])
   const cmv = normalizeQuotes(input.cmvIgg).toLowerCase().trim()
   normalized.cmvIgg = /חיובי|positive|\bpos\b|\+/.test(cmv)
@@ -153,8 +166,15 @@ export function normalizeExtractedDonor<T extends NormalizableDonorFields>(input
 export function verifyListField(field: DonorListField, value: string) {
   if (!value.trim()) return null
   if (value.length > 200) return `השדה ${labels[field]} ארוך מדי (עד 200 תווים).`
-  if (/^\s*,|,\s*$|,,|;|\|/.test(value)) return `יש לתקן את המפרידים בשדה ${labels[field]}.`
-  if (/,\S/.test(value)) return `יש להוסיף רווח אחרי כל פסיק בשדה ${labels[field]}.`
+  if (singleValueFields.has(field)) {
+    if (value.includes(',')) return `השדה ${labels[field]} מכיל ערך אחד בלבד; אין להשתמש בפסיקים.`
+    if (/\s/.test(value.trim())) return `יש להפריד מילים בשדה ${labels[field]} באמצעות מקף, ללא רווחים.`
+  } else {
+    if (/^\s*,|,\s*$|,\s*,|;|\|/.test(value)) return `יש לתקן את המפרידים בשדה ${labels[field]}.`
+    if (/\s+,/.test(value)) return `יש להסיר רווח לפני כל פסיק בשדה ${labels[field]}.`
+    if (/,\S/.test(value)) return `יש להוסיף רווח אחד אחרי כל פסיק בשדה ${labels[field]}.`
+    if (/,\s{2,}/.test(value)) return `יש להשאיר רווח אחד בלבד אחרי כל פסיק בשדה ${labels[field]}.`
+  }
 
   const tokens = value.split(',').map((token) => token.trim()).filter(Boolean)
   if (tokens.length > 12) return `השדה ${labels[field]} מכיל יותר מדי ערכים.`
@@ -174,4 +194,14 @@ export function verifyListField(field: DonorListField, value: string) {
   const normalized = normalizeListField(field, value)
   if (normalized !== value.trim()) return `יש לאשר את הניסוח התקין בשדה ${labels[field]}.`
   return null
+}
+
+export function normalizeEditableTextField(
+  field: 'donorNumber' | 'occupation' | DonorListField,
+  value: string,
+) {
+  if (listFields.includes(field as DonorListField)) {
+    return normalizeListField(field as DonorListField, value)
+  }
+  return normalizeCommaSpacing(normalizeQuotes(value).replace(/\s+/g, ' ').trim())
 }

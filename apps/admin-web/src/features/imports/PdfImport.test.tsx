@@ -203,7 +203,9 @@ describe('PDF import approval workflow', () => {
     expect(screen.getAllByText('ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.').length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'אישור וסיום — אין תורמים חדשים' })).toBeDisabled()
 
-    fireEvent.change(origin, { target: { value: 'רוסיה, רומניה' } })
+    fireEvent.change(origin, { target: { value: 'רוסיה ,רומניה' } })
+    fireEvent.blur(origin)
+    expect(origin).toHaveValue('רוסיה, רומניה')
     expect(origin).toHaveAttribute('aria-invalid', 'false')
     expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()
   })
