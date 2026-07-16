@@ -68,6 +68,22 @@ describe('deterministic donor table extraction', () => {
     ])
   })
 
+  it('recognizes a carrier marker emitted as separate reordered PDF text items', () => {
+    const page = fixturePage()
+    page.items = page.items.filter((entry) => entry.text !== 'D-100***')
+    page.items.push(
+      item('D-100', anchorX.donorNumber - 15, 795, 50),
+      item('*', anchorX.donorNumber + 20, 795, 8),
+      item('*', anchorX.donorNumber + 30, 795, 8),
+      item('*', anchorX.donorNumber + 40, 795, 8),
+    )
+
+    const result = parseDeterministicTablePages([page])
+    expect(result.donors[0]).toMatchObject({
+      donorNumber: 'כינוי D-100', geneticCarrierStatus: 'שלילי',
+    })
+  })
+
   it('fails closed when a known header is missing so the caller can use Gemini', () => {
     const page = fixturePage()
     page.items = page.items.filter((entry) => entry.text !== 'מוצא')

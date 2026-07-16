@@ -9,6 +9,15 @@ describe('donor number metadata', () => {
     })
   })
 
+  it('recognizes three PDF asterisks even when reordered or separated into text items', () => {
+    expect(parseDonorNumberMetadata('* * * D-300')).toEqual({
+      donorNumber: 'D-300', geneticCarrierStatus: 'שלילי',
+    })
+    expect(parseDonorNumberMetadata('D-301 ∗ ∗ ∗ כינוי')).toEqual({
+      donorNumber: 'D-301 כינוי', geneticCarrierStatus: 'שלילי',
+    })
+  })
+
   it('infers positive for unmarked or differently marked donor numbers', () => {
     expect(parseDonorNumberMetadata('D-301')).toEqual({
       donorNumber: 'D-301', geneticCarrierStatus: 'חיובי',

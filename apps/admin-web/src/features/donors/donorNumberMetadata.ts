@@ -4,11 +4,16 @@ export function parseDonorNumberMetadata(value: string): {
   donorNumber: string
   geneticCarrierStatus: GeneticCarrierStatus
 } {
-  const normalized = value.normalize('NFKC').replace(/\s+/g, ' ').trim()
-  const trailingAsterisks = normalized.match(/\*+\s*$/)?.[0].trim() ?? ''
-  const hasNegativeMarker = trailingAsterisks === '***'
+  const normalized = value
+    .normalize('NFKC')
+    .replace(/[﹡＊∗]/g, '*')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const hasNegativeMarker = (normalized.match(/\*/g) ?? []).length === 3
   return {
-    donorNumber: hasNegativeMarker ? normalized.slice(0, -3).trimEnd() : normalized,
+    donorNumber: hasNegativeMarker
+      ? normalized.replace(/\*/g, '').replace(/\s+/g, ' ').trim()
+      : normalized,
     geneticCarrierStatus: hasNegativeMarker ? 'שלילי' : 'חיובי',
   }
 }
