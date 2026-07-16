@@ -439,7 +439,7 @@ export function PdfImport({
                           </td>
                         )
                       })}
-                      <td><span className={`cmv-chip ${row.donor.geneticCarrierStatus === 'חיובי' ? 'cmv-positive' : 'cmv-negative'}`}>{row.donor.geneticCarrierStatus}</span></td>
+                      <td><span className={`cmv-chip ${row.donor.geneticCarrierStatus === 'שלילי' ? 'genetic-carrier-safe' : 'genetic-carrier-alert'}`}>{row.donor.geneticCarrierStatus}</span></td>
                       <td>
                         <label className="sr-only" htmlFor={`${row.id}-height`}>גובה, שורה {index + 1}</label>
                         <input id={`${row.id}-height`} type="number" inputMode="decimal" min="1" max="2.5" step="0.01" value={row.donor.heightMeters ?? ''} aria-invalid={Boolean(row.errors.heightMeters)} title={row.errors.heightMeters} onChange={(event) => updateRow(index, 'heightMeters', event.target.value === '' ? null : Number(event.target.value))} />
@@ -504,7 +504,7 @@ export function PdfImport({
                           </label>
                         )
                       })}
-                      <div className="full-mobile-field derived-review-field"><span>נשאויות גנטיות</span><strong>{row.donor.geneticCarrierStatus}</strong></div>
+                      <div className="full-mobile-field derived-review-field"><span>נשאויות גנטיות</span><strong className={`cmv-chip ${row.donor.geneticCarrierStatus === 'שלילי' ? 'genetic-carrier-safe' : 'genetic-carrier-alert'}`}>{row.donor.geneticCarrierStatus}</strong></div>
                       <label><span>גובה (מ׳)</span><input type="number" inputMode="decimal" min="1" max="2.5" step="0.01" value={row.donor.heightMeters ?? ''} aria-invalid={Boolean(row.errors.heightMeters)} onChange={(event) => updateRow(index, 'heightMeters', event.target.value === '' ? null : Number(event.target.value))} />{row.errors.heightMeters && <small>{row.errors.heightMeters}</small>}</label>
                       <label><span>משקל (ק״ג)</span><input type="number" inputMode="decimal" min="30" max="300" step="0.1" value={row.donor.weightKg ?? ''} aria-invalid={Boolean(row.errors.weightKg)} onChange={(event) => updateRow(index, 'weightKg', event.target.value === '' ? null : Number(event.target.value))} />{row.errors.weightKg && <small>{row.errors.weightKg}</small>}</label>
                       <label className="full-mobile-field"><span>CMV IgG</span><select value={row.donor.cmvIgg} aria-invalid={Boolean(row.errors.cmvIgg)} onChange={(event) => updateRow(index, 'cmvIgg', event.target.value)}><option value="">לא ידוע</option><option value="חיובי">חיובי</option><option value="שלילי">שלילי</option></select>{row.errors.cmvIgg && <small>{row.errors.cmvIgg}</small>}</label>

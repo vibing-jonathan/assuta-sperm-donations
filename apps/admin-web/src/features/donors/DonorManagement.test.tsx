@@ -103,7 +103,8 @@ describe('DonorManagement', () => {
     fireEvent.click(await screen.findByLabelText('פעולות עבור תורם D-4922'))
     const desktopTable = container.querySelector('.desktop-donor-table')
     const donorRow = within(desktopTable as HTMLElement).getByRole('row', { name: /D-4922/ })
-    expect(within(donorRow).getAllByRole('cell')[0]).toHaveTextContent('שלילי')
+    const carrierStatus = within(within(donorRow).getAllByRole('cell')[0]!).getByText('שלילי')
+    expect(carrierStatus).toHaveClass('genetic-carrier-safe')
     fireEvent.click(within(desktopTable as HTMLElement).getByRole('button', { name: 'מחיקת תורם' }))
 
     const dialog = screen.getByRole('alertdialog', { name: 'מחיקת תורם' })

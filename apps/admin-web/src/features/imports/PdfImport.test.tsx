@@ -151,6 +151,7 @@ describe('PDF import approval workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
     expect(await screen.findByRole('heading', { name: 'נמצאו 4 שורות תורמים' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'נשאויות גנטיות' })).toBeInTheDocument()
+    expect(container.querySelector('.genetic-carrier-alert')).toHaveTextContent('חיובי')
     expect(screen.getByText(/אזהרות חילוץ/)).toBeInTheDocument()
     expect(screen.getAllByText('כפול בקובץ')).toHaveLength(2)
     expect(screen.getAllByText(/כבר קיים במאגר|כבר קיים/)).toHaveLength(2)

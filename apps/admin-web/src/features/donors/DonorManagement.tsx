@@ -220,7 +220,7 @@ export function DonorManagement({
                 {visibleDonors.map((donor) => (
                   <tr key={donor.id}>
                     <th scope="row">{displayedDonorMetadata(donor).donorNumber}</th>
-                    <td><span className={`cmv-chip ${displayedDonorMetadata(donor).geneticCarrierStatus === 'חיובי' ? 'cmv-positive' : 'cmv-negative'}`}>{displayedDonorMetadata(donor).geneticCarrierStatus}</span></td>
+                    <td><span className={`cmv-chip ${displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'genetic-carrier-safe' : 'genetic-carrier-alert'}`}>{displayedDonorMetadata(donor).geneticCarrierStatus}</span></td>
                     <td>{donor.occupation || '—'}</td><td>{donor.origin || '—'}</td><td>{donor.religion || '—'}</td>
                     <td>{donor.skinColor || '—'}</td><td>{donor.eyeColor || '—'}</td><td>{donor.hairColor || '—'}</td>
                     <td className="numeric-cell">{donor.heightMeters ?? '—'}</td><td className="numeric-cell">{donor.weightKg ?? '—'}</td>
@@ -271,7 +271,7 @@ export function DonorManagement({
                       <div><dt>צבע עור</dt><dd>{donor.skinColor || '—'}</dd></div>
                       <div><dt>עיניים</dt><dd>{donor.eyeColor || '—'}</dd></div>
                       <div><dt>שיער</dt><dd>{donor.hairColor || '—'}</dd></div>
-                      <div><dt>נשאויות גנטיות</dt><dd>{displayedDonorMetadata(donor).geneticCarrierStatus}</dd></div>
+                      <div><dt>נשאויות גנטיות</dt><dd><span className={`cmv-chip ${displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'genetic-carrier-safe' : 'genetic-carrier-alert'}`}>{displayedDonorMetadata(donor).geneticCarrierStatus}</span></dd></div>
                       <div><dt>גובה</dt><dd>{donor.heightMeters ? `${donor.heightMeters} מ׳` : '—'}</dd></div>
                       <div><dt>משקל</dt><dd>{donor.weightKg ? `${donor.weightKg} ק״ג` : '—'}</dd></div>
                     </dl>

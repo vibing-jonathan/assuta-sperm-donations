@@ -418,6 +418,16 @@ tbody tr:last-child td {
   color: var(--red);
 }
 
+.genetic-carrier-safe {
+  background: var(--teal-soft);
+  color: #086358;
+}
+
+.genetic-carrier-alert {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
 .actions-cell {
   position: relative;
   text-align: center;

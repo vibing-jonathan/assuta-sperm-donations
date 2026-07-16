@@ -137,7 +137,7 @@ function groupAnchorLines(items: PositionedPdfText[]) {
   return groups
 }
 
-const listFieldColumns = new Set<ColumnKey>(['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor'])
+const multiValueColumns = new Set<ColumnKey>(['origin', 'religion', 'hairColor'])
 
 function joinCell(items: PositionedPdfText[], preserveListLines = false) {
   const lines = groupAnchorLines(items)
@@ -207,7 +207,7 @@ function parsePage(page: PositionedPdfPage) {
     const populatedColumns = [...cells.values()].filter((cellItems) => joinCell(cellItems)).length
     if (populatedColumns < 5) throw new DeterministicExtractionFailure('unsupported_layout')
 
-    const text = (key: ColumnKey) => joinCell(cells.get(key) ?? [], listFieldColumns.has(key))
+    const text = (key: ColumnKey) => joinCell(cells.get(key) ?? [], multiValueColumns.has(key))
     const heightText = text('heightMeters')
     const weightText = text('weightKg')
     const cmvText = text('cmvIgg')

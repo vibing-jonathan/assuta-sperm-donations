@@ -98,4 +98,16 @@ describe('deterministic donor table extraction', () => {
     const result = parseDeterministicTablePages([page])
     expect(result.donors[0]?.origin).toBe('רוסיה, רומניה, בלרוס, רוסי')
   })
+
+  it('joins split skin-color lines as one hyphenated value without a comma', () => {
+    const page = fixturePage()
+    page.items = page.items.filter((entry) => !(entry.text === 'בהיר' && entry.y === 810))
+    page.items.push(
+      item('בהיר-', anchorX.skinColor, 820),
+      item('משתזף', anchorX.skinColor, 800),
+    )
+
+    const result = parseDeterministicTablePages([page])
+    expect(result.donors[0]?.skinColor).toBe('בהיר-משתזף')
+  })
 })
