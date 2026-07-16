@@ -31,4 +31,13 @@ describe('donor field normalization rules', () => {
     expect(verifyListField('origin', 'רוסיה,רומניה')).toBe('יש להוסיף רווח אחרי כל פסיק בשדה מוצא.')
     expect(verifyListField('religion', 'יהודי, יהודי')).toBe('השדה דת מכיל ערכים כפולים.')
   })
+
+  it('requires manual review for semantic values outside the controlled vocabulary', () => {
+    expect(verifyListField('origin', 'רוסיה, אטלנטיס')).toBe(
+      'ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.',
+    )
+    expect(verifyListField('religion', 'ערך לא מוכר')).toBe(
+      'ערך לא מוכר בשדה דת: ערך לא מוכר. יש לתקן ידנית.',
+    )
+  })
 })

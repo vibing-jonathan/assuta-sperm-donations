@@ -66,8 +66,9 @@ The importer first parses the stable catalog table locally from PDF text coordin
 header, column, or row confidence checks fail, it automatically falls back to the protected Gemini
 Function. Both paths run through local, field-specific normalization before review: PDF line-aware
 list reconstruction, canonical Hebrew punctuation and comma spacing, approved aliases, empty-token
-removal, and duplicate removal. Remaining malformed list fields are reported as row-specific review
-errors instead of being guessed by AI. Every approval writes an admin-only `donorImports` audit document with the source file
+removal, and duplicate removal. Remaining malformed list fields and semantic values outside the
+controlled vocabulary are reported as blocking, row-specific review errors for manual correction
+instead of being guessed by AI. Every approval writes an admin-only `donorImports` audit document with the source file
 name, detected page range, extraction method, parser version, duration, fallback reason and Gemini
 model when used, administrator, timestamp, counts, warnings, duplicate numbers, status, and outcome.
 Failed transactions make a best-effort `failed/import_failed` audit

@@ -154,6 +154,34 @@ describe('PDF import approval workflow', () => {
     expect(screen.getByRole('status').querySelector('p')).toHaveTextContent('1 תורמים יובאו, 2 כפילויות דולגו')
   })
 
+  it('highlights an unknown semantic value and blocks approval until it is fixed', async () => {
+    const { container } = render(
+      <PdfImport
+        adminEmail="jgabbayj@gmail.com"
+        repository={repository()}
+        scanPdf={vi.fn().mockResolvedValue(scanResult)}
+        extractPdf={vi.fn().mockResolvedValue({
+          ...deterministicMetadata,
+          warnings: [],
+          donors: [validDonor('A-1', { origin: 'רוסיה, אטלנטיס' })],
+        })}
+      />,
+    )
+
+    upload(container)
+    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
+
+    const origin = await screen.findByLabelText('מוצא, שורה 1')
+    expect(origin).toHaveAttribute('aria-invalid', 'true')
+    expect(origin).toHaveAttribute('title', 'ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.')
+    expect(screen.getAllByText('ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'אישור וסיום — אין תורמים חדשים' })).toBeDisabled()
+
+    fireEvent.change(origin, { target: { value: 'רוסיה, רומניה' } })
+    expect(origin).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.getByRole('button', { name: 'אישור וייבוא 1 תורמים' })).toBeEnabled()
+  })
+
   it('reports an atomic save failure and keeps the review available for retry', async () => {
     const { container } = render(
       <PdfImport

@@ -47,6 +47,16 @@ describe('import review analysis', () => {
     })
   })
 
+  it('marks unknown semantic values as ineligible until manually corrected', () => {
+    const [row] = analyzeReviewRows(createReviewRows([
+      donor('A-4', { origin: 'רוסיה, אטלנטיס' }),
+    ]), new Set())
+
+    expect(row?.errors.origin).toBe('ערך לא מוכר בשדה מוצא: אטלנטיס. יש לתקן ידנית.')
+    expect(row?.eligible).toBe(false)
+    expect(selectedValidDonors(row ? [row] : [])).toEqual([])
+  })
+
   it('excludes manually deselected rows', () => {
     const rows = createReviewRows([donor('1'), donor('2')])
     rows[1]!.selected = false

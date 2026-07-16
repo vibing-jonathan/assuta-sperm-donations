@@ -160,6 +160,12 @@ export function verifyListField(field: DonorListField, value: string) {
     seen.add(key)
   }
 
+  const { byKey } = vocabulary(field)
+  const unknown = tokens.filter((token) => !byKey.has(comparisonKey(token)))
+  if (unknown.length > 0) {
+    return `ערך לא מוכר בשדה ${labels[field]}: ${unknown.join(', ')}. יש לתקן ידנית.`
+  }
+
   const normalized = normalizeListField(field, value)
   if (normalized !== value.trim()) return `יש לאשר את הניסוח התקין בשדה ${labels[field]}.`
   return null
