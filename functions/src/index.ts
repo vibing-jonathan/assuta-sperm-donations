@@ -23,6 +23,17 @@ interface ExtractionRequest {
 
 class InvalidRequestError extends Error {}
 
+function readErrorDiagnostics(error: unknown) {
+  if (!(error instanceof Error)) return { errorName: 'UnknownError' }
+  const apiError = error as Error & { status?: unknown; code?: unknown }
+  return {
+    errorName: error.name,
+    errorStatus: typeof apiError.status === 'number' ? apiError.status : undefined,
+    errorCode: typeof apiError.code === 'string' || typeof apiError.code === 'number' ? apiError.code : undefined,
+    errorMessage: error.message.replace(/\s+/g, ' ').slice(0, 300),
+  }
+}
+
 function readExtractionRequest(data: unknown): ExtractionRequest {
   if (!data || typeof data !== 'object') throw new InvalidRequestError('Invalid extraction request.')
   const input = data as Record<string, unknown>
@@ -108,6 +119,7 @@ export const extractDonorsFromPdf = onRequest({
 אל תחלץ כותרות, הערות שוליים או מידע שאינו שורת טבלה.
   `.trim()
 
+  let extractionStage = 'gemini_request'
   try {
     const interaction = await ai.interactions.create({
       model: GEMINI_MODEL,
@@ -122,6 +134,7 @@ export const extractDonorsFromPdf = onRequest({
       },
     })
     if (!interaction.output_text) throw new Error('Gemini returned an empty extraction response.')
+    extractionStage = 'response_validation'
     const extracted = parseExtractionResponse(interaction.output_text)
     logger.info('Donor PDF extraction completed.', {
       adminEmail,
@@ -136,7 +149,8 @@ export const extractDonorsFromPdf = onRequest({
     logger.error('Donor PDF extraction failed.', {
       adminEmail,
       sourceFileName: input.sourceFileName,
-      errorName: error instanceof Error ? error.name : 'UnknownError',
+      extractionStage,
+      ...readErrorDiagnostics(error),
     })
     response.status(500).json({ error: 'Donor extraction failed. Please try again.' })
   }

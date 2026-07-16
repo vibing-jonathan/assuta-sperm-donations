@@ -26,7 +26,6 @@ export const extractionJsonSchema = {
   properties: {
     donors: {
       type: 'array',
-      maxItems: 500,
       items: {
         type: 'object',
         additionalProperties: false,
@@ -50,7 +49,6 @@ export const extractionJsonSchema = {
     },
     warnings: {
       type: 'array',
-      maxItems: 100,
       items: { type: 'string' },
       description: 'Hebrew notes about illegible or uncertain source cells. Return an empty array when none.',
     },

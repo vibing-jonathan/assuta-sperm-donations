@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseExtractionResponse } from './extractionSchema.js'
+import { extractionJsonSchema, parseExtractionResponse } from './extractionSchema.js'
 
 describe('Gemini extraction validation', () => {
   it('accepts a complete donor row', () => {
@@ -24,5 +24,10 @@ describe('Gemini extraction validation', () => {
       }],
       warnings: [],
     }))).toThrow()
+  })
+
+  it('keeps collection limits out of the Gemini schema', () => {
+    expect(extractionJsonSchema.properties.donors).not.toHaveProperty('maxItems')
+    expect(extractionJsonSchema.properties.warnings).not.toHaveProperty('maxItems')
   })
 })
