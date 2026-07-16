@@ -33,9 +33,10 @@ export function LoginForm({ auth }: LoginFormProps) {
   return (
     <main className="auth-shell" dir="rtl">
       <section className="auth-card" aria-labelledby="login-title">
+        <div className="auth-brand" aria-hidden="true"><span>⚕</span></div>
         <p className="app-eyebrow">כניסת מנהלים</p>
         <h1 id="login-title">ברוכים הבאים</h1>
-        <p className="auth-description">התחברו באמצעות חשבון Firebase מורשה.</p>
+        <p className="auth-description">מערכת ניהול קלינית מאובטחת</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label>
@@ -69,10 +70,11 @@ export function LoginForm({ auth }: LoginFormProps) {
           )}
 
           <button className="primary-button" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'מתבצעת התחברות…' : 'התחברות'}
+            {isSubmitting ? 'מתבצעת התחברות…' : 'כניסה למערכת ←'}
           </button>
         </form>
       </section>
+      <footer className="auth-footer">מערכת מאובטחת · שימוש מורשה בלבד</footer>
     </main>
   )
 }

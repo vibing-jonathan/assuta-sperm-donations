@@ -16,8 +16,8 @@ const repository: DonorRepository = {
 }
 
 describe('App', () => {
-  it('renders the Hebrew administration foundation', () => {
-    render(
+  it('renders the Hebrew administration foundation and mobile navigation shell', () => {
+    const { container } = render(
       <AdminDashboard
         email="jgabbayj@gmail.com"
         onSignOut={() => undefined}
@@ -31,6 +31,8 @@ describe('App', () => {
     expect(screen.getByText('מערכת ניהול תורמים').closest('.admin-layout')).toHaveAttribute('dir', 'rtl')
     expect(screen.getByText('jgabbayj@gmail.com')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'רשימת תורמים' })).toBeInTheDocument()
+    expect(container.querySelector('.mobile-topbar')).toBeInTheDocument()
+    expect(container.querySelector('.mobile-bottom-nav')).toHaveAttribute('aria-label', 'ניווט ראשי לנייד')
   })
 
   it('opens the local PDF import workspace', () => {
@@ -64,7 +66,7 @@ describe('App', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים עם Gemini' }))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'תורמים' })).toBeDisabled()
+      expect(screen.getAllByRole('button', { name: 'תורמים' }).every((button) => button.hasAttribute('disabled'))).toBe(true)
       expect(screen.getByRole('button', { name: 'יציאה' })).toBeDisabled()
     })
     expect(screen.getByRole('heading', { name: 'Gemini מחלץ את נתוני התורמים' })).toBeInTheDocument()

@@ -27,6 +27,10 @@ export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportPro
 
   return (
     <div className="admin-layout" dir="rtl">
+      <header className="mobile-topbar">
+        <div className="mobile-topbar-brand"><span className="brand-mark" aria-hidden="true">✚</span><strong>מערכת קלינית</strong></div>
+        <button className="mobile-signout" type="button" disabled={importOperationActive} aria-label="יציאה מהמערכת" onClick={() => void onSignOut()}>↪</button>
+      </header>
       <aside className="sidebar">
         <div>
           <div className="brand-lockup">
@@ -56,6 +60,11 @@ export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportPro
             />
           )}
       </main>
+      <nav className="mobile-bottom-nav" aria-label="ניווט ראשי לנייד">
+        <button className={activePage === 'donors' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'donors' ? 'page' : undefined} onClick={() => navigateTo('donors')}><span aria-hidden="true">♙</span><small>תורמים</small></button>
+        <button className={activePage === 'import' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'import' ? 'page' : undefined} onClick={() => navigateTo('import')}><span aria-hidden="true">▧</span><small>ייבוא קובץ</small></button>
+        <button type="button" disabled title="הגדרות יתווספו בהמשך"><span aria-hidden="true">⚙</span><small>הגדרות</small></button>
+      </nav>
     </div>
   )
 }

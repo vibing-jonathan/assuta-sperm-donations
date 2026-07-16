@@ -426,6 +426,52 @@ export function PdfImport({
             </table>
           </div>
 
+          <div className="mobile-review-list" aria-label="שורות תורמים לבדיקה">
+            {reviewedRows.map((row, index) => {
+              const duplicateLabel = row.duplicateKind === 'existing' ? 'כבר קיים' : row.duplicateKind === 'within-file' ? 'כפול בקובץ' : null
+              const rowErrors = Object.values(row.errors)
+              return (
+                <article className={`mobile-review-card ${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`} key={`mobile-${row.id}`}>
+                  <div className="mobile-review-card-header">
+                    <input
+                      type="checkbox"
+                      aria-label={`ייבוא שורה ${index + 1} בנייד`}
+                      checked={row.selected && !duplicateLabel}
+                      disabled={Boolean(duplicateLabel)}
+                      onChange={() => toggleRow(index)}
+                    />
+                    <div>
+                      <strong>{row.donor.donorNumber || `שורה ${index + 1}`}</strong>
+                      <span>{row.donor.occupation || 'עיסוק לא צוין'} · {row.donor.origin || 'מוצא לא צוין'}</span>
+                    </div>
+                    {duplicateLabel ? <span className="status-chip duplicate-chip">{duplicateLabel}</span>
+                      : rowErrors.length > 0 && row.selected ? <span className="status-chip error-chip">{rowErrors.length} שגיאות</span>
+                        : row.selected ? <span className="status-chip valid-chip">תקין</span>
+                          : <span className="status-chip excluded-chip">מוחרג</span>}
+                  </div>
+                  <details>
+                    <summary>פרטים ועריכה <span aria-hidden="true">⌄</span></summary>
+                    <div className="mobile-review-fields">
+                      {editableTextFields.map(({ key, label }) => {
+                        const fieldError = key === 'donorNumber' ? row.errors.donorNumber : undefined
+                        return (
+                          <label className={key === 'donorNumber' ? 'full-mobile-field' : undefined} key={key}>
+                            <span>{label}</span>
+                            <input value={String(row.donor[key] ?? '')} aria-invalid={Boolean(fieldError)} onChange={(event) => updateRow(index, key, event.target.value)} />
+                            {fieldError && <small>{fieldError}</small>}
+                          </label>
+                        )
+                      })}
+                      <label><span>גובה (מ׳)</span><input type="number" inputMode="decimal" min="1" max="2.5" step="0.01" value={row.donor.heightMeters ?? ''} aria-invalid={Boolean(row.errors.heightMeters)} onChange={(event) => updateRow(index, 'heightMeters', event.target.value === '' ? null : Number(event.target.value))} />{row.errors.heightMeters && <small>{row.errors.heightMeters}</small>}</label>
+                      <label><span>משקל (ק״ג)</span><input type="number" inputMode="decimal" min="30" max="300" step="0.1" value={row.donor.weightKg ?? ''} aria-invalid={Boolean(row.errors.weightKg)} onChange={(event) => updateRow(index, 'weightKg', event.target.value === '' ? null : Number(event.target.value))} />{row.errors.weightKg && <small>{row.errors.weightKg}</small>}</label>
+                      <label className="full-mobile-field"><span>CMV IgG</span><select value={row.donor.cmvIgg} aria-invalid={Boolean(row.errors.cmvIgg)} onChange={(event) => updateRow(index, 'cmvIgg', event.target.value)}><option value="">לא ידוע</option><option value="חיובי">חיובי</option><option value="שלילי">שלילי</option></select>{row.errors.cmvIgg && <small>{row.errors.cmvIgg}</small>}</label>
+                    </div>
+                  </details>
+                </article>
+              )
+            })}
+          </div>
+
           <footer className="review-actions">
             <div>
               <button className="primary-button" type="button" disabled={approvalDisabled} onClick={() => void approveImport()}>

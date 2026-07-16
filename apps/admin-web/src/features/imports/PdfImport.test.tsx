@@ -91,9 +91,11 @@ describe('PDF import approval workflow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים עם Gemini' }))
     expect(await screen.findByRole('heading', { name: 'נמצאו 4 שורות תורמים' })).toBeInTheDocument()
     expect(screen.getByText(/אזהרות Gemini/)).toBeInTheDocument()
-    expect(screen.getByText('כפול בקובץ')).toBeInTheDocument()
-    expect(screen.getByText('כבר קיים במאגר')).toBeInTheDocument()
+    expect(screen.getAllByText('כפול בקובץ')).toHaveLength(2)
+    expect(screen.getAllByText(/כבר קיים במאגר|כבר קיים/)).toHaveLength(2)
     expect(screen.getAllByText('נדרש תיקון')).toHaveLength(1)
+    expect(container.querySelector('.mobile-review-list')).toBeInTheDocument()
+    expect(container.querySelectorAll('.mobile-review-card')).toHaveLength(4)
     expect(screen.getByRole('button', { name: /אישור וייבוא/ })).toBeDisabled()
 
     fireEvent.click(screen.getByLabelText('ייבוא שורה 1'))

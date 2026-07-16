@@ -53,10 +53,15 @@ describe('DonorManagement', () => {
       weightKg: 75,
       cmvIgg: 'שלילי',
     }])
-    render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
+    const { container } = render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
+
+    const mobileList = container.querySelector('.mobile-donor-list')
+    expect(mobileList).toBeInTheDocument()
+    expect(within(mobileList as HTMLElement).getByText('D-4922')).toBeInTheDocument()
 
     fireEvent.click(await screen.findByLabelText('פעולות עבור תורם D-4922'))
-    fireEvent.click(screen.getByRole('button', { name: 'מחיקת תורם' }))
+    const desktopTable = container.querySelector('.desktop-donor-table')
+    fireEvent.click(within(desktopTable as HTMLElement).getByRole('button', { name: 'מחיקת תורם' }))
 
     const dialog = screen.getByRole('alertdialog', { name: 'מחיקת תורם' })
     expect(dialog).toBeInTheDocument()

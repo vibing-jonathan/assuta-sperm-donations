@@ -198,7 +198,8 @@ export function DonorManagement({
             <p>{donors.length === 0 ? 'הוסיפו את התורם הראשון כדי להתחיל.' : 'נסו לשנות את מילות החיפוש.'}</p>
           </div>
         ) : (
-          <div className="table-scroll">
+          <>
+          <div className="table-scroll desktop-donor-table">
             <table>
               <thead>
                 <tr>
@@ -233,6 +234,43 @@ export function DonorManagement({
               </tbody>
             </table>
           </div>
+          <div className="mobile-donor-list" aria-label="כרטיסי תורמים">
+            {visibleDonors.map((donor) => (
+              <article className="mobile-donor-card" key={`mobile-${donor.id}`}>
+                <details>
+                  <summary>
+                    <div className="mobile-donor-card-heading">
+                      <div>
+                        <strong dir="ltr">{donor.donorNumber}</strong>
+                        <span>{donor.occupation || 'עיסוק לא צוין'}</span>
+                      </div>
+                      {donor.cmvIgg ? (
+                        <span className={`cmv-chip ${isPositiveCmv(donor.cmvIgg) ? 'cmv-positive' : 'cmv-negative'}`}>
+                          CMV {isPositiveCmv(donor.cmvIgg) ? 'Pos' : 'Neg'}
+                        </span>
+                      ) : <span className="cmv-chip cmv-unknown">CMV Unk</span>}
+                    </div>
+                    <div className="mobile-donor-summary">
+                      <span>{donor.origin || 'מוצא לא צוין'}</span>
+                      <span>{donor.religion || 'דת לא צוינה'}</span>
+                      <i aria-hidden="true">⌄</i>
+                    </div>
+                  </summary>
+                  <div className="mobile-donor-details">
+                    <dl>
+                      <div><dt>צבע עור</dt><dd>{donor.skinColor || '—'}</dd></div>
+                      <div><dt>עיניים</dt><dd>{donor.eyeColor || '—'}</dd></div>
+                      <div><dt>שיער</dt><dd>{donor.hairColor || '—'}</dd></div>
+                      <div><dt>גובה</dt><dd>{donor.heightMeters ? `${donor.heightMeters} מ׳` : '—'}</dd></div>
+                      <div><dt>משקל</dt><dd>{donor.weightKg ? `${donor.weightKg} ק״ג` : '—'}</dd></div>
+                    </dl>
+                    <button className="mobile-delete-button" type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
+                  </div>
+                </details>
+              </article>
+            ))}
+          </div>
+          </>
         )}
       </section>
 
