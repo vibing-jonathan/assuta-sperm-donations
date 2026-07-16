@@ -285,6 +285,145 @@ input {
   margin: 0 0 1rem;
 }
 
+.settings-workspace {
+  width: min(100%, 62rem);
+  margin: 0 auto;
+}
+
+.settings-security-note {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e6cf94;
+  border-radius: 0.7rem;
+  background: #fff9e9;
+  color: #624b0b;
+}
+
+.settings-security-note p {
+  margin: 0.3rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.settings-card {
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: var(--surface);
+}
+
+.settings-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.settings-card-heading h2 {
+  margin: 0;
+  color: var(--navy-900);
+  font-size: 1.1rem;
+}
+
+.settings-card-heading p {
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.settings-loading {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.settings-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.25rem 0;
+}
+
+.settings-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.settings-field label {
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.settings-field input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.settings-field input:focus {
+  border-color: var(--navy-800);
+  outline: 3px solid rgb(11 57 124 / 14%);
+}
+
+.settings-field input[aria-invalid='true'] {
+  border-color: var(--red);
+}
+
+.password-input-wrap {
+  position: relative;
+  display: block;
+}
+
+.password-input-wrap input {
+  padding-left: 5rem;
+}
+
+.password-input-wrap button {
+  position: absolute;
+  top: 50%;
+  left: 0.35rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border: 0;
+  border-radius: 0.35rem;
+  background: var(--surface-soft);
+  color: var(--navy-800);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transform: translateY(-50%);
+}
+
+.field-error {
+  color: var(--red);
+  font-size: 0.78rem;
+}
+
+.settings-success {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #aad8cf;
+  border-radius: 0.5rem;
+  background: var(--teal-soft);
+  color: var(--teal);
+  font-size: 0.9rem;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
 .database-panel {
   overflow: visible;
   border: 1px solid var(--line);
@@ -1507,8 +1646,21 @@ input:focus-visible {
 
   .summary-grid,
   .form-grid,
-  .upload-grid {
+  .upload-grid,
+  .settings-fields {
     grid-template-columns: 1fr;
+  }
+
+  .settings-card {
+    padding: 1rem;
+  }
+
+  .settings-card-heading {
+    flex-direction: column;
+  }
+
+  .settings-actions .primary-button {
+    width: 100%;
   }
 
   .summary-grid {

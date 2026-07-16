@@ -7,20 +7,25 @@ import { AuthGate } from './components/AuthGate'
 import { DonorManagement } from './features/donors/DonorManagement'
 import type { DonorRepository } from './features/donors/donorRepository'
 import { PdfImport, type PdfImportProps } from './features/imports/PdfImport'
+import { UserAccessSettings } from './features/settings/UserAccessSettings'
+import type { UserAccessRepository } from './features/settings/userAccessRepository'
 import { auth } from './lib/firebase'
+
+type AdminPage = 'donors' | 'import' | 'settings'
 
 interface AdminDashboardProps {
   email: string
   onSignOut: () => void | Promise<void>
   donorRepository?: DonorRepository
   pdfImportProps?: Partial<Pick<PdfImportProps, 'repository' | 'scanPdf' | 'extractPdf'>>
+  userAccessRepository?: UserAccessRepository
 }
 
-export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportProps }: AdminDashboardProps) {
-  const [activePage, setActivePage] = useState<'donors' | 'import'>('donors')
+export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportProps, userAccessRepository }: AdminDashboardProps) {
+  const [activePage, setActivePage] = useState<AdminPage>('donors')
   const [importOperationActive, setImportOperationActive] = useState(false)
 
-  function navigateTo(page: 'donors' | 'import') {
+  function navigateTo(page: AdminPage) {
     if (importOperationActive) return
     setActivePage(page)
   }
@@ -40,7 +45,7 @@ export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportPro
           <nav className="primary-nav" aria-label="ניווט ראשי">
             <button className={activePage === 'donors' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'donors' ? 'page' : undefined} onClick={() => navigateTo('donors')}><span aria-hidden="true">◉</span> תורמים</button>
             <button className={activePage === 'import' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'import' ? 'page' : undefined} onClick={() => navigateTo('import')}><span aria-hidden="true">⇧</span> ייבוא קבצים</button>
-            <button type="button" disabled title="הגדרות יתווספו בהמשך"><span aria-hidden="true">⚙</span> הגדרות</button>
+            <button className={activePage === 'settings' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'settings' ? 'page' : undefined} onClick={() => navigateTo('settings')}><span aria-hidden="true">⚙</span> הגדרות</button>
           </nav>
         </div>
         <div className="account-panel">
@@ -49,9 +54,8 @@ export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportPro
         </div>
       </aside>
       <main className="app-shell" id={activePage}>
-        {activePage === 'donors'
-          ? <DonorManagement adminEmail={email} repository={donorRepository} />
-          : (
+        {activePage === 'donors' && <DonorManagement adminEmail={email} repository={donorRepository} />}
+        {activePage === 'import' && (
             <PdfImport
               adminEmail={email}
               onNavigateToDonors={() => navigateTo('donors')}
@@ -59,11 +63,12 @@ export function AdminDashboard({ email, onSignOut, donorRepository, pdfImportPro
               {...pdfImportProps}
             />
           )}
+        {activePage === 'settings' && <UserAccessSettings adminEmail={email} repository={userAccessRepository} />}
       </main>
       <nav className="mobile-bottom-nav" aria-label="ניווט ראשי לנייד">
         <button className={activePage === 'donors' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'donors' ? 'page' : undefined} onClick={() => navigateTo('donors')}><span aria-hidden="true">♙</span><small>תורמים</small></button>
         <button className={activePage === 'import' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'import' ? 'page' : undefined} onClick={() => navigateTo('import')}><span aria-hidden="true">▧</span><small>ייבוא קובץ</small></button>
-        <button type="button" disabled title="הגדרות יתווספו בהמשך"><span aria-hidden="true">⚙</span><small>הגדרות</small></button>
+        <button className={activePage === 'settings' ? 'active' : undefined} type="button" disabled={importOperationActive} aria-current={activePage === 'settings' ? 'page' : undefined} onClick={() => navigateTo('settings')}><span aria-hidden="true">⚙</span><small>הגדרות</small></button>
       </nav>
     </div>
   )

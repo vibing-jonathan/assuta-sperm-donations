@@ -169,6 +169,26 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /appSettings/userAccess {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'username', 'password', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'username', 'password', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.username is string
+        && request.resource.data.username.size() > 0
+        && request.resource.data.username.size() <= 100
+        && request.resource.data.password is string
+        && request.resource.data.password.size() > 0
+        && request.resource.data.password.size() <= 200
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.token.email;
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

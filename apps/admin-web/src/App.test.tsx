@@ -5,6 +5,7 @@ import { AdminDashboard } from './App'
 import type { DonorRepository } from './features/donors/donorRepository'
 import type { ExtractionResult } from './features/imports/extractDonors'
 import type { PdfScanResult } from './features/imports/scanDonorPdf'
+import type { UserAccessRepository } from './features/settings/userAccessRepository'
 
 const repository: DonorRepository = {
   subscribe: async (onData) => {
@@ -13,6 +14,11 @@ const repository: DonorRepository = {
   },
   add: vi.fn(),
   remove: vi.fn(),
+}
+
+const userAccessRepository: UserAccessRepository = {
+  get: vi.fn().mockResolvedValue({ username: 'Shared user', password: 'fixture password' }),
+  save: vi.fn(),
 }
 
 describe('App', () => {
@@ -47,6 +53,21 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'ייבוא קבצים' }))
     expect(screen.getByRole('heading', { level: 1, name: 'ייבוא תורמים מקובץ' })).toBeInTheDocument()
     expect(screen.getByText('המערכת מנסה תחילה חילוץ מקומי מהיר.')).toBeInTheDocument()
+  })
+
+  it('opens the shared user-access settings from the navigation', async () => {
+    render(
+      <AdminDashboard
+        email="jgabbayj@gmail.com"
+        onSignOut={() => undefined}
+        donorRepository={repository}
+        userAccessRepository={userAccessRepository}
+      />,
+    )
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'הגדרות' })[0]!)
+    expect(screen.getByRole('heading', { level: 1, name: 'פרטי גישה לאפליקציית המשתמשים' })).toBeInTheDocument()
+    expect(await screen.findByDisplayValue('Shared user')).toBeInTheDocument()
   })
 
   it('prevents in-app navigation and sign-out during extraction', async () => {

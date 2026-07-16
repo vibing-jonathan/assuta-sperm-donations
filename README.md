@@ -87,6 +87,13 @@ after every comma.
 The UI limits each approval to 249 new or replacement donors so donor documents, uniqueness claims, and the audit
 record remain below Firestore's 500-write transaction limit.
 
+### Shared user-app access
+
+The admin Settings page manages the shared user-app username and password stored in the admin-only
+`appSettings/userAccess` Firestore document. This is intentionally a basic, shared access gate rather
+than individual authentication. The future user app must validate the credential through a controlled
+backend endpoint; Firestore rules do not allow unauthenticated clients to read the stored password.
+
 ## Google Stitch MCP
 
 The repository configures Stitch in `.codex/config.toml` without storing its API key. `STITCH_API_KEY` must be present in the operating-system environment that launches Codex; a project `.env` file is not automatically loaded by the MCP host. Restart Codex after setting it.
