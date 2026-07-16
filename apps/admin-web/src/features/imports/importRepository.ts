@@ -1,5 +1,6 @@
 import { getDatabase } from '../../lib/firebase'
 import { donorNumberClaimId, normalizeDonorNumber, type DonorInput } from '../donors/donor'
+import { parseDonorNumberMetadata } from '../donors/donorNumberMetadata'
 import type { DeterministicFallbackReason } from './deterministicExtraction'
 
 export const MAX_DONORS_PER_IMPORT = 249
@@ -66,21 +67,36 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
   }
 
   const importId = store.createId('donorImports')
-  const candidates = input.donors.map((donor) => ({
-    donor: { ...donor, donorNumber: donor.donorNumber.trim() },
-    donorId: store.createId('donors'),
-    claimPath: `donorNumberClaims/${donorNumberClaimId(donor.donorNumber)}`,
-  }))
+  const candidates = input.donors.map((donor) => {
+    const metadata = parseDonorNumberMetadata(donor.donorNumber)
+    const normalizedDonor = {
+      ...donor,
+      donorNumber: metadata.donorNumber,
+      geneticCarrierStatus: metadata.geneticCarrierStatus === 'שלילי'
+        ? 'שלילי' as const
+        : donor.geneticCarrierStatus,
+    }
+    return {
+      donor: normalizedDonor,
+      donorId: store.createId('donors'),
+      claimPath: `donorNumberClaims/${donorNumberClaimId(normalizedDonor.donorNumber)}`,
+      legacyClaimPath: `donorNumberClaims/${donorNumberClaimId(`${normalizedDonor.donorNumber}***`)}`,
+    }
+  })
 
   try {
     return await store.runTransaction(async (transaction) => {
-      const claimSnapshots: AtomicSnapshot[] = await Promise.all(
-        candidates.map((candidate) => transaction.get(candidate.claimPath)),
+      const claimSnapshots: Array<[AtomicSnapshot, AtomicSnapshot]> = await Promise.all(
+        candidates.map(async (candidate) => Promise.all([
+          transaction.get(candidate.claimPath),
+          transaction.get(candidate.legacyClaimPath),
+        ])),
       )
 
       const concurrentDuplicates: string[] = []
       const imported = candidates.filter((candidate, index) => {
-        if (!claimSnapshots[index]?.exists) return true
+        const [claim, legacyClaim] = claimSnapshots[index] ?? []
+        if (!claim?.exists && !legacyClaim?.exists) return true
         concurrentDuplicates.push(candidate.donor.donorNumber)
         return false
       })
@@ -200,7 +216,9 @@ export const firestoreImportRepository: ImportRepository = {
     const { collection, getDocs } = await import('firebase/firestore')
     const database = await getDatabase()
     const snapshot = await getDocs(collection(database, 'donors'))
-    return new Set(snapshot.docs.map((document) => normalizeDonorNumber(String(document.data().donorNumber ?? ''))))
+    return new Set(snapshot.docs.map((document) => normalizeDonorNumber(
+      parseDonorNumberMetadata(String(document.data().donorNumber ?? '')).donorNumber,
+    )))
   },
   async importApproved(input) {
     return executeAtomicImport(await createFirestoreStore(), input)

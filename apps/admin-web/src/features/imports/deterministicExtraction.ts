@@ -41,7 +41,7 @@ export class DeterministicExtractionFailure extends Error {
   }
 }
 
-type ColumnKey = keyof DonorInput
+type ColumnKey = Exclude<keyof DonorInput, 'geneticCarrierStatus'>
 
 const columns: ColumnKey[] = [
   'donorNumber',

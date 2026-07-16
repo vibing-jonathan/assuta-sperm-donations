@@ -30,7 +30,7 @@ export const extractionJsonSchema = {
         type: 'object',
         additionalProperties: false,
         properties: {
-          donorNumber: { type: 'string', description: 'The complete donor identifier exactly as displayed in the first table column.' },
+          donorNumber: { type: 'string', description: 'The complete donor identifier exactly as displayed in the first table column. Preserve exactly three trailing asterisks (***) when present; never add them.' },
           occupation: { type: 'string', description: 'Occupation in Hebrew; use an empty string when blank.' },
           origin: { type: 'string', description: 'Ethnic or geographic origin in Hebrew; use an empty string when blank.' },
           religion: { type: 'string', description: 'Religion in Hebrew; use an empty string when blank.' },

@@ -23,8 +23,20 @@ describe('donor field normalization rules', () => {
     })
     expect(normalized).toMatchObject({
       donorNumber: 'D-1', occupation: 'מנהל פרויקטים', origin: 'רומניה, בלרוס',
-      religion: 'יהודי', skinColor: 'בהיר', cmvIgg: 'שלילי',
+      geneticCarrierStatus: 'חיובי', religion: 'יהודי', skinColor: 'בהיר', cmvIgg: 'שלילי',
     })
+  })
+
+  it('moves a trailing three-asterisk donor marker into genetic carrier status', () => {
+    expect(normalizeExtractedDonor({
+      donorNumber: 'D-300 ***', occupation: '', origin: '', religion: '', skinColor: '',
+      eyeColor: '', hairColor: '', cmvIgg: '',
+    })).toMatchObject({ donorNumber: 'D-300', geneticCarrierStatus: 'שלילי' })
+
+    expect(normalizeExtractedDonor({
+      donorNumber: 'D-301', occupation: '', origin: '', religion: '', skinColor: '',
+      eyeColor: '', hairColor: '', cmvIgg: '',
+    })).toMatchObject({ donorNumber: 'D-301', geneticCarrierStatus: 'חיובי' })
   })
 
   it('returns field-specific review errors for manually entered malformed values', () => {

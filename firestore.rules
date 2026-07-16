@@ -12,17 +12,19 @@ service cloud.firestore {
 
     function hasValidDonorSchema() {
       return request.resource.data.keys().hasOnly([
-          'donorNumber', 'occupation', 'origin', 'religion', 'skinColor',
+          'donorNumber', 'geneticCarrierStatus', 'occupation', 'origin', 'religion', 'skinColor',
           'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
           'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'importId'
         ])
         && request.resource.data.keys().hasAll([
-          'donorNumber', 'occupation', 'origin', 'religion', 'skinColor',
+          'donorNumber', 'geneticCarrierStatus', 'occupation', 'origin', 'religion', 'skinColor',
           'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
           'createdAt', 'createdBy', 'updatedAt', 'updatedBy'
         ])
         && request.resource.data.donorNumber is string
         && request.resource.data.donorNumber.size() > 0
+        && !request.resource.data.donorNumber.matches('.*\\*\\*\\*$')
+        && request.resource.data.geneticCarrierStatus in ['חיובי', 'שלילי']
         && request.resource.data.occupation is string
         && request.resource.data.origin is string
         && request.resource.data.religion is string

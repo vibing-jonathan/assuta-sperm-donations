@@ -27,7 +27,7 @@ export interface ExtractionResult {
 }
 
 interface GeminiExtractionResponse {
-  donors: DonorInput[]
+  donors: Array<Omit<DonorInput, 'geneticCarrierStatus'> & Partial<Pick<DonorInput, 'geneticCarrierStatus'>>>
   warnings: string[]
   model: string
 }

@@ -52,7 +52,7 @@ describe('extraction error mapping', () => {
 describe('hybrid extraction orchestration', () => {
   const range = { startPage: 2, endPage: 2, pageCount: 1, totalPages: 4, scannedPages: 2 }
   const donor = {
-    donorNumber: 'D-1', occupation: '', origin: '', religion: '', skinColor: '',
+    donorNumber: 'D-1', geneticCarrierStatus: 'חיובי' as const, occupation: '', origin: '', religion: '', skinColor: '',
     eyeColor: '', hairColor: '', heightMeters: 1.8, weightKg: 75, cmvIgg: 'שלילי',
   }
 
@@ -97,7 +97,7 @@ describe('hybrid extraction orchestration', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
-        donors: [{ ...donor, origin: 'ארה " ב,פולין' }], warnings: [], model: 'gemini-test',
+        donors: [{ ...donor, donorNumber: 'D-1***', origin: 'ארה " ב,פולין' }], warnings: [], model: 'gemini-test',
       }),
     }))
     const onFallback = vi.fn()
@@ -108,7 +108,9 @@ describe('hybrid extraction orchestration', () => {
     expect(result).toMatchObject({
       extractionMethod: 'gemini-fallback', parserVersion: 'donor-table-v2',
       fallbackReason: 'columns_ambiguous', model: 'gemini-test',
-      donors: [expect.objectContaining({ origin: 'ארה"ב, פולין' })],
+      donors: [expect.objectContaining({
+        donorNumber: 'D-1', geneticCarrierStatus: 'שלילי', origin: 'ארה"ב, פולין',
+      })],
     })
   })
 })

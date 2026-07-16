@@ -2,6 +2,7 @@ import type { DocumentData, QueryDocumentSnapshot, Unsubscribe } from 'firebase/
 
 import { getDatabase } from '../../lib/firebase'
 import { donorNumberClaimId, normalizeDonorNumber, type Donor, type DonorInput } from './donor'
+import { parseDonorNumberMetadata } from './donorNumberMetadata'
 
 export class DuplicateDonorNumberError extends Error {
   constructor() {
@@ -36,19 +37,27 @@ export const firestoreDonorRepository: DonorRepository = {
   async add(input, adminEmail) {
     const { collection, doc, getDocs, runTransaction, serverTimestamp } = await import('firebase/firestore')
     const database = await getDatabase()
-    const normalized = normalizeDonorNumber(input.donorNumber)
+    const donorMetadata = parseDonorNumberMetadata(input.donorNumber)
+    const normalizedInput = { ...input, ...donorMetadata }
+    const normalized = normalizeDonorNumber(normalizedInput.donorNumber)
     const existing = await getDocs(collection(database, 'donors'))
-    if (existing.docs.some((snapshot) => normalizeDonorNumber(String(snapshot.data().donorNumber ?? '')) === normalized)) {
+    if (existing.docs.some((snapshot) => normalizeDonorNumber(
+      parseDonorNumberMetadata(String(snapshot.data().donorNumber ?? '')).donorNumber,
+    ) === normalized)) {
       throw new DuplicateDonorNumberError()
     }
     const donorReference = doc(collection(database, 'donors'))
-    const claimReference = doc(database, 'donorNumberClaims', donorNumberClaimId(input.donorNumber))
+    const claimReference = doc(database, 'donorNumberClaims', donorNumberClaimId(normalizedInput.donorNumber))
+    const legacyClaimReference = doc(database, 'donorNumberClaims', donorNumberClaimId(`${normalizedInput.donorNumber}***`))
     await runTransaction(database, async (transaction) => {
-      if ((await transaction.get(claimReference)).exists()) throw new DuplicateDonorNumberError()
+      const [claim, legacyClaim] = await Promise.all([
+        transaction.get(claimReference),
+        transaction.get(legacyClaimReference),
+      ])
+      if (claim.exists() || legacyClaim.exists()) throw new DuplicateDonorNumberError()
       const timestamp = serverTimestamp()
       transaction.set(donorReference, {
-        ...input,
-        donorNumber: input.donorNumber.trim(),
+        ...normalizedInput,
         createdAt: timestamp,
         createdBy: adminEmail,
         updatedAt: timestamp,
@@ -56,7 +65,7 @@ export const firestoreDonorRepository: DonorRepository = {
       })
       transaction.set(claimReference, {
         donorId: donorReference.id,
-        donorNumber: input.donorNumber.trim(),
+        donorNumber: normalizedInput.donorNumber,
         normalizedDonorNumber: normalized,
         createdAt: timestamp,
         createdBy: adminEmail,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { DonorInput } from '../donors/donor'
+import { donorNumberClaimId, type DonorInput } from '../donors/donor'
 import {
   executeAtomicImport,
   MAX_DONORS_PER_IMPORT,
@@ -9,7 +9,7 @@ import {
 } from './importRepository'
 
 const donor = (donorNumber: string): DonorInput => ({
-  donorNumber, occupation: '', origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '',
+  donorNumber, geneticCarrierStatus: 'חיובי', occupation: '', origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '',
   heightMeters: 1.8, weightKg: 75, cmvIgg: 'שלילי',
 })
 
@@ -62,6 +62,18 @@ describe('atomic donor import', () => {
     })
   })
 
+  it('stores a starred source number as a clean number with negative carrier status', async () => {
+    const { store, committed } = fakeStore()
+    await executeAtomicImport(store, {
+      ...context, donors: [donor('A-8***')], skippedDuplicateNumbers: [],
+    })
+
+    const storedDonor = [...committed.entries()].find(([path]) => path.startsWith('donors/'))?.[1]
+    expect(storedDonor).toMatchObject({
+      donorNumber: 'A-8', geneticCarrierStatus: 'שלילי',
+    })
+  })
+
   it('rechecks claims inside the transaction and skips a concurrent duplicate', async () => {
     const probe = fakeStore()
     await executeAtomicImport(probe.store, { ...context, donors: [donor('A-1')], skippedDuplicateNumbers: [] })
@@ -74,6 +86,18 @@ describe('atomic donor import', () => {
     expect([...committed.values()].find((value) => value.status === 'completed')).toMatchObject({
       outcome: 'duplicates_skipped', importedCount: 0,
     })
+  })
+
+  it('treats a legacy starred claim as the same clean donor number', async () => {
+    const legacyClaimPath = `donorNumberClaims/${donorNumberClaimId('A-9***')}`
+    const { store, committed } = fakeStore(new Set([legacyClaimPath]))
+
+    const result = await executeAtomicImport(store, {
+      ...context, donors: [donor('A-9')], skippedDuplicateNumbers: [],
+    })
+
+    expect(result).toMatchObject({ importedCount: 0, skippedCount: 1 })
+    expect([...committed.keys()].some((path) => path.startsWith('donors/'))).toBe(false)
   })
 
   it('records Gemini only when it was used as a structural fallback', async () => {

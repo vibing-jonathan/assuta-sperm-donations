@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
 import { emptyDonorInput, validateDonor, type Donor, type DonorInput } from './donor'
+import { displayedDonorMetadata, parseDonorNumberMetadata } from './donorNumberMetadata'
 import { DuplicateDonorNumberError, firestoreDonorRepository, type DonorRepository } from './donorRepository'
 
 interface DonorManagementProps {
@@ -103,7 +104,8 @@ export function DonorManagement({
 
   async function submitDonor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const validationError = validateDonor(form)
+    const normalizedForm = { ...form, ...parseDonorNumberMetadata(form.donorNumber) }
+    const validationError = validateDonor(normalizedForm)
     if (validationError) {
       setError(validationError)
       return
@@ -112,7 +114,7 @@ export function DonorManagement({
     setIsSaving(true)
     setError(null)
     try {
-      await repository.add(form, adminEmail)
+      await repository.add(normalizedForm, adminEmail)
       setForm(emptyDonorInput)
       setIsFormOpen(false)
     } catch (reason) {
@@ -203,14 +205,15 @@ export function DonorManagement({
             <table>
               <thead>
                 <tr>
-                  <th>מס׳ תורם</th><th>עיסוק</th><th>מוצא</th><th>דת</th><th>צבע עור</th>
+                  <th>מס׳ תורם</th><th>נשאויות גנטיות</th><th>עיסוק</th><th>מוצא</th><th>דת</th><th>צבע עור</th>
                   <th>עיניים</th><th>שיער</th><th>גובה (מ׳)</th><th>משקל (ק״ג)</th><th>CMV IgG</th><th>פעולות</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleDonors.map((donor) => (
                   <tr key={donor.id}>
-                    <th scope="row">{donor.donorNumber}</th>
+                    <th scope="row">{displayedDonorMetadata(donor).donorNumber}</th>
+                    <td><span className={`cmv-chip ${displayedDonorMetadata(donor).geneticCarrierStatus === 'חיובי' ? 'cmv-positive' : 'cmv-negative'}`}>{displayedDonorMetadata(donor).geneticCarrierStatus}</span></td>
                     <td>{donor.occupation || '—'}</td><td>{donor.origin || '—'}</td><td>{donor.religion || '—'}</td>
                     <td>{donor.skinColor || '—'}</td><td>{donor.eyeColor || '—'}</td><td>{donor.hairColor || '—'}</td>
                     <td className="numeric-cell">{donor.heightMeters ?? '—'}</td><td className="numeric-cell">{donor.weightKg ?? '—'}</td>
@@ -223,7 +226,7 @@ export function DonorManagement({
                     </td>
                     <td className="actions-cell">
                       <details className="row-actions">
-                        <summary aria-label={`פעולות עבור תורם ${donor.donorNumber}`}>•••</summary>
+                        <summary aria-label={`פעולות עבור תורם ${displayedDonorMetadata(donor).donorNumber}`}>•••</summary>
                         <div className="action-menu">
                           <button type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
                         </div>
@@ -241,7 +244,7 @@ export function DonorManagement({
                   <summary>
                     <div className="mobile-donor-card-heading">
                       <div>
-                        <strong dir="ltr">{donor.donorNumber}</strong>
+                        <strong dir="ltr">{displayedDonorMetadata(donor).donorNumber}</strong>
                         <span>{donor.occupation || 'עיסוק לא צוין'}</span>
                       </div>
                       {donor.cmvIgg ? (
@@ -261,6 +264,7 @@ export function DonorManagement({
                       <div><dt>צבע עור</dt><dd>{donor.skinColor || '—'}</dd></div>
                       <div><dt>עיניים</dt><dd>{donor.eyeColor || '—'}</dd></div>
                       <div><dt>שיער</dt><dd>{donor.hairColor || '—'}</dd></div>
+                      <div><dt>נשאויות גנטיות</dt><dd>{displayedDonorMetadata(donor).geneticCarrierStatus}</dd></div>
                       <div><dt>גובה</dt><dd>{donor.heightMeters ? `${donor.heightMeters} מ׳` : '—'}</dd></div>
                       <div><dt>משקל</dt><dd>{donor.weightKg ? `${donor.weightKg} ק״ג` : '—'}</dd></div>
                     </dl>
@@ -341,7 +345,7 @@ export function DonorManagement({
               <button className="dialog-close" type="button" aria-label="סגירת החלון" disabled={isDeleting} onClick={() => setDonorPendingDelete(null)}>×</button>
             </header>
             <div className="delete-dialog-body">
-              <p id="delete-dialog-description">האם למחוק את תורם <strong dir="ltr">{donorPendingDelete.donorNumber}</strong>?</p>
+              <p id="delete-dialog-description">האם למחוק את תורם <strong dir="ltr">{displayedDonorMetadata(donorPendingDelete).donorNumber}</strong>?</p>
               <p className="delete-warning"><span aria-hidden="true">⚠</span> לא ניתן לבטל פעולה זו.</p>
             </div>
             <footer className="dialog-footer">

@@ -717,6 +717,20 @@ tbody tr:last-child td {
   line-height: 1.4;
 }
 
+.derived-review-field {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: var(--surface-soft);
+}
+
+.derived-review-field span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .range-result .primary-button {
   margin-top: 0.65rem;
   justify-self: start;

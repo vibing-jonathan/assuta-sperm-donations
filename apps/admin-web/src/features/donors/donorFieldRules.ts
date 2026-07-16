@@ -1,7 +1,10 @@
 export type DonorListField = 'origin' | 'religion' | 'skinColor' | 'eyeColor' | 'hairColor'
 
+import { parseDonorNumberMetadata, type GeneticCarrierStatus } from './donorNumberMetadata'
+
 interface NormalizableDonorFields {
   donorNumber: string
+  geneticCarrierStatus?: GeneticCarrierStatus
   occupation: string
   origin: string
   religion: string
@@ -133,9 +136,11 @@ export function normalizeListField(field: DonorListField, value: string) {
   return [...unique.values()].join(', ')
 }
 
-export function normalizeExtractedDonor<T extends NormalizableDonorFields>(input: T): T {
-  const normalized = { ...input }
-  normalized.donorNumber = normalizeQuotes(input.donorNumber).replace(/\s+/g, ' ').trim()
+export function normalizeExtractedDonor<T extends NormalizableDonorFields>(input: T): T & { geneticCarrierStatus: GeneticCarrierStatus } {
+  const normalized = { ...input } as T & { geneticCarrierStatus: GeneticCarrierStatus }
+  const donorMetadata = parseDonorNumberMetadata(normalizeQuotes(input.donorNumber))
+  normalized.donorNumber = donorMetadata.donorNumber
+  normalized.geneticCarrierStatus = donorMetadata.geneticCarrierStatus
   normalized.occupation = normalizeQuotes(input.occupation).replace(/\s+/g, ' ').trim()
   for (const field of listFields) normalized[field] = normalizeListField(field, input[field])
   const cmv = normalizeQuotes(input.cmvIgg).toLowerCase().trim()

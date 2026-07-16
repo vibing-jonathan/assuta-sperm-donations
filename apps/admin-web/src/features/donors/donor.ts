@@ -1,5 +1,9 @@
+import { verifyListField, type DonorListField } from './donorFieldRules'
+import type { GeneticCarrierStatus } from './donorNumberMetadata'
+
 export interface DonorInput {
   donorNumber: string
+  geneticCarrierStatus: GeneticCarrierStatus
   occupation: string
   origin: string
   religion: string
@@ -18,6 +22,7 @@ export interface Donor extends DonorInput {
 
 export const emptyDonorInput: DonorInput = {
   donorNumber: '',
+  geneticCarrierStatus: 'חיובי',
   occupation: '',
   origin: '',
   religion: '',
@@ -90,4 +95,3 @@ export function validateImportDonor(input: DonorInput): DonorValidationErrors {
   }
   return errors
 }
-import { verifyListField, type DonorListField } from './donorFieldRules'

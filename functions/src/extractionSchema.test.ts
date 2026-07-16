@@ -16,6 +16,18 @@ describe('Gemini extraction validation', () => {
     expect(result.donors[0]?.donorNumber).toBe('Carson 1314')
   })
 
+  it('preserves a trailing three-asterisk donor marker for client-side status derivation', () => {
+    const result = parseExtractionResponse(JSON.stringify({
+      donors: [{
+        donorNumber: 'Carson 1314***', occupation: '', origin: '', religion: '', skinColor: '',
+        eyeColor: '', hairColor: '', heightMeters: 1.82, weightKg: 79, cmvIgg: 'שלילי',
+      }],
+      warnings: [],
+    }))
+
+    expect(result.donors[0]?.donorNumber).toBe('Carson 1314***')
+  })
+
   it('rejects physiologically invalid numeric values', () => {
     expect(() => parseExtractionResponse(JSON.stringify({
       donors: [{

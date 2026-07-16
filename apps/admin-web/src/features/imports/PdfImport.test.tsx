@@ -18,7 +18,7 @@ const fallbackMetadata = {
   fallbackReason: 'columns_ambiguous' as const,
 }
 const validDonor = (donorNumber: string, overrides: Partial<DonorInput> = {}): DonorInput => ({
-  donorNumber, occupation: 'רופא', origin: 'ספרדי', religion: 'יהודי', skinColor: 'בהיר',
+  donorNumber, geneticCarrierStatus: 'חיובי', occupation: 'רופא', origin: 'ספרדי', religion: 'יהודי', skinColor: 'בהיר',
   eyeColor: 'חום', hairColor: 'שחור', heightMeters: 1.8, weightKg: 75, cmvIgg: 'שלילי',
   ...overrides,
 })
@@ -148,6 +148,7 @@ describe('PDF import approval workflow', () => {
     await screen.findByRole('button', { name: 'חילוץ נתונים' })
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
     expect(await screen.findByRole('heading', { name: 'נמצאו 4 שורות תורמים' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'נשאויות גנטיות' })).toBeInTheDocument()
     expect(screen.getByText(/אזהרות חילוץ/)).toBeInTheDocument()
     expect(screen.getAllByText('כפול בקובץ')).toHaveLength(2)
     expect(screen.getAllByText(/כבר קיים במאגר|כבר קיים/)).toHaveLength(2)

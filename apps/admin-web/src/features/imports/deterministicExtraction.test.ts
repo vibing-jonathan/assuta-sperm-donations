@@ -38,7 +38,7 @@ function fixturePage(): PositionedPdfPage {
     item('CMV IgG', anchorX.cmvIgg, 888, 70),
   ]
   const rows = [
-    ['כינוי', 'D-100', 'רופא', 'ספרדי', 'יהודי', 'בהיר', 'חום', 'שחור', '180', '75', '+'],
+    ['כינוי', 'D-100***', 'רופא', 'ספרדי', 'יהודי', 'בהיר', 'חום', 'שחור', '180', '75', '+'],
     ['D-101', 'מהנדס', 'אירופי', 'יהודי', 'בהיר', 'ירוק', 'חום', '1.76', '82', 'שלילי'],
   ]
   items.push(
@@ -58,11 +58,11 @@ describe('deterministic donor table extraction', () => {
     expect(result.warnings).toEqual([])
     expect(result.donors).toEqual([
       expect.objectContaining({
-        donorNumber: 'כינוי D-100', occupation: 'רופא', heightMeters: 1.8,
-        weightKg: 75, cmvIgg: 'חיובי',
+        donorNumber: 'כינוי D-100', geneticCarrierStatus: 'שלילי', occupation: 'רופא',
+        heightMeters: 1.8, weightKg: 75, cmvIgg: 'חיובי',
       }),
       expect.objectContaining({
-        donorNumber: 'D-101', occupation: 'מהנדס', heightMeters: 1.76,
+        donorNumber: 'D-101', geneticCarrierStatus: 'חיובי', occupation: 'מהנדס', heightMeters: 1.76,
         weightKg: 82, cmvIgg: 'שלילי',
       }),
     ])

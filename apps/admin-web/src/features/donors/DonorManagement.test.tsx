@@ -28,10 +28,24 @@ describe('DonorManagement', () => {
 
     await waitFor(() => {
       expect(repository.add).toHaveBeenCalledWith(
-        expect.objectContaining({ donorNumber: '1024', occupation: 'רופא' }),
+        expect.objectContaining({ donorNumber: '1024', geneticCarrierStatus: 'חיובי', occupation: 'רופא' }),
         'admin@example.com',
       )
     })
+  })
+
+  it('moves the three-asterisk marker into genetic carrier status when adding manually', async () => {
+    const repository = createRepository()
+    render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'הוספת תורם' }))
+    fireEvent.change(screen.getByLabelText(/מס׳ תורם/), { target: { value: 'D-300***' } })
+    fireEvent.click(screen.getByRole('button', { name: 'שמירת תורם' }))
+
+    await waitFor(() => expect(repository.add).toHaveBeenCalledWith(
+      expect.objectContaining({ donorNumber: 'D-300', geneticCarrierStatus: 'שלילי' }),
+      'admin@example.com',
+    ))
   })
 
   it('shows the empty database state', async () => {
@@ -40,9 +54,9 @@ describe('DonorManagement', () => {
   })
 
   it('requires explicit confirmation before deleting a donor', async () => {
-    const repository = createRepository([{
+    const legacyDonor = {
       id: 'donor-1',
-      donorNumber: 'D-4922',
+      donorNumber: 'D-4922***',
       occupation: 'רופא',
       origin: 'ספרדי',
       religion: 'יהודי',
@@ -52,7 +66,8 @@ describe('DonorManagement', () => {
       heightMeters: 1.8,
       weightKg: 75,
       cmvIgg: 'שלילי',
-    }])
+    } as Donor
+    const repository = createRepository([legacyDonor])
     const { container } = render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
 
     const mobileList = container.querySelector('.mobile-donor-list')
@@ -61,6 +76,8 @@ describe('DonorManagement', () => {
 
     fireEvent.click(await screen.findByLabelText('פעולות עבור תורם D-4922'))
     const desktopTable = container.querySelector('.desktop-donor-table')
+    const donorRow = within(desktopTable as HTMLElement).getByRole('row', { name: /D-4922/ })
+    expect(within(donorRow).getAllByRole('cell')[0]).toHaveTextContent('שלילי')
     fireEvent.click(within(desktopTable as HTMLElement).getByRole('button', { name: 'מחיקת תורם' }))
 
     const dialog = screen.getByRole('alertdialog', { name: 'מחיקת תורם' })
@@ -68,6 +85,6 @@ describe('DonorManagement', () => {
     expect(repository.remove).not.toHaveBeenCalled()
     fireEvent.click(within(dialog).getByRole('button', { name: /מחיקת תורם/ }))
 
-    await waitFor(() => expect(repository.remove).toHaveBeenCalledWith('donor-1', 'D-4922'))
+    await waitFor(() => expect(repository.remove).toHaveBeenCalledWith('donor-1', 'D-4922***'))
   })
 })

@@ -75,6 +75,9 @@ name, detected page range, extraction method, parser version, duration, fallback
 model when used, administrator, timestamp, counts, warnings, duplicate numbers, status, and outcome.
 Failed transactions make a best-effort `failed/import_failed` audit
 write without exposing diagnostic details. Imported donor documents reference a successful audit through `importId`.
+Three trailing asterisks in a source donor number are stored as `geneticCarrierStatus: "שלילי"`
+and removed from the donor number; unmarked numbers are stored as `"חיובי"`. Legacy starred records
+are rendered without the marker and remain compatible with duplicate detection and deletion.
 The UI limits each approval to 249 new donors so donor documents, uniqueness claims, and the audit
 record remain below Firestore's 500-write transaction limit.
 

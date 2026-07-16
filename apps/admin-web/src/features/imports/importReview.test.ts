@@ -6,6 +6,7 @@ import { analyzeReviewRows, createReviewRows, selectedValidDonors } from './impo
 function donor(donorNumber: string, overrides: Partial<DonorInput> = {}): DonorInput {
   return {
     donorNumber,
+    geneticCarrierStatus: 'חיובי',
     occupation: '', origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '',
     heightMeters: 1.8, weightKg: 75, cmvIgg: 'שלילי',
     ...overrides,
