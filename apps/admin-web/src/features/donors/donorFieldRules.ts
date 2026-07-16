@@ -71,7 +71,10 @@ export function normalizeExtractedDonor<T extends NormalizableDonorFields>(input
   const normalized = { ...input } as T & { geneticCarrierStatus: GeneticCarrierStatus }
   const donorMetadata = parseDonorNumberMetadata(normalizeCommaSpacing(normalizeQuotes(input.donorNumber)))
   normalized.donorNumber = donorMetadata.donorNumber
-  normalized.geneticCarrierStatus = donorMetadata.geneticCarrierStatus
+  normalized.geneticCarrierStatus = donorMetadata.geneticCarrierStatus === 'שלילי'
+    || input.geneticCarrierStatus === 'שלילי'
+    ? 'שלילי'
+    : 'חיובי'
   normalized.occupation = normalizeCommaSpacing(normalizeQuotes(input.occupation).replace(/\s+/g, ' ').trim())
   for (const field of listFields) normalized[field] = normalizeListField(field, input[field])
   const cmv = normalizeQuotes(input.cmvIgg).toLowerCase().trim()

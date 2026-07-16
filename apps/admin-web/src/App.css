@@ -388,6 +388,22 @@ tbody tr:hover {
   background: #f2f6fd;
 }
 
+tbody tr.negative-carrier-highlight {
+  background: #f2faf7;
+  box-shadow: inset -3px 0 0 #9bcfbe;
+}
+
+tbody tr.negative-carrier-highlight:hover {
+  background: #eaf7f2;
+}
+
+.mobile-donor-card.negative-carrier-highlight,
+.mobile-review-card.negative-carrier-highlight {
+  border-color: #b9ddd1;
+  background: #f4fbf8;
+  box-shadow: inset -3px 0 0 #9bcfbe;
+}
+
 tbody tr:last-child th,
 tbody tr:last-child td {
   border-bottom: 0;

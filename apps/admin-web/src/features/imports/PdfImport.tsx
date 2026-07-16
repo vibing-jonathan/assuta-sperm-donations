@@ -412,7 +412,7 @@ export function PdfImport({
                   const duplicateLabel = row.duplicateKind === 'existing' ? 'כבר קיים במאגר' : row.duplicateKind === 'within-file' ? 'כפול בקובץ' : null
                   const rowErrors = Object.values(row.errors)
                   return (
-                    <tr key={row.id} className={`${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`}>
+                    <tr key={row.id} className={`${row.donor.geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''} ${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`}>
                       <td className="selection-cell">
                         <input
                           type="checkbox"
@@ -473,7 +473,7 @@ export function PdfImport({
               const duplicateLabel = row.duplicateKind === 'existing' ? 'כבר קיים' : row.duplicateKind === 'within-file' ? 'כפול בקובץ' : null
               const rowErrors = Object.values(row.errors)
               return (
-                <article className={`mobile-review-card ${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`} key={`mobile-${row.id}`}>
+                <article className={`mobile-review-card ${row.donor.geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''} ${duplicateLabel ? 'duplicate-row' : ''} ${rowErrors.length > 0 && row.selected ? 'invalid-row' : ''}`} key={`mobile-${row.id}`}>
                   <div className="mobile-review-card-header">
                     <input
                       type="checkbox"

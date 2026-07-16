@@ -138,7 +138,7 @@ describe('PDF import approval workflow', () => {
         extractPdf={vi.fn().mockResolvedValue({
           ...fallbackMetadata, warnings: ['גובה בשורה האחרונה לא היה קריא'],
           donors: [
-            validDonor('A-1'), validDonor(' A-1 '), validDonor('B-2'),
+            validDonor('A-1', { geneticCarrierStatus: 'שלילי' }), validDonor(' A-1 '), validDonor('B-2'),
             validDonor('', { heightMeters: null, weightKg: 400, cmvIgg: '' }),
           ],
         })}
@@ -151,6 +151,7 @@ describe('PDF import approval workflow', () => {
     expect(await screen.findByRole('heading', { name: 'נמצאו 4 שורות תורמים' })).toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'נשאויות גנטיות' })).toBeInTheDocument()
     expect(container.querySelector('.genetic-carrier-alert')).toHaveTextContent('חיובי')
+    expect(container.querySelectorAll('.negative-carrier-highlight')).toHaveLength(2)
     expect(screen.getByText(/אזהרות חילוץ/)).toBeInTheDocument()
     expect(screen.getAllByText('כפול בקובץ')).toHaveLength(2)
     expect(screen.getAllByText(/כבר קיים במאגר|כבר קיים/)).toHaveLength(2)

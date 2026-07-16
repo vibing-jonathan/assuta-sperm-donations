@@ -45,6 +45,17 @@ describe('donor field normalization rules', () => {
     })).toMatchObject({ donorNumber: 'D-301', geneticCarrierStatus: 'חיובי' })
   })
 
+  it('preserves a negative carrier status when an extracted donor is normalized again', () => {
+    const normalized = normalizeExtractedDonor({
+      donorNumber: 'D-302***', occupation: '', origin: '', religion: '', skinColor: '',
+      eyeColor: '', hairColor: '', cmvIgg: '',
+    })
+
+    expect(normalizeExtractedDonor(normalized)).toMatchObject({
+      donorNumber: 'D-302', geneticCarrierStatus: 'שלילי',
+    })
+  })
+
   it('returns field-specific review errors for manually entered malformed values', () => {
     expect(verifyListField('origin', 'רוסיה,רומניה')).toBe('יש להוסיף רווח אחד אחרי כל פסיק בשדה מוצא.')
     expect(verifyListField('origin', 'רוסיה , רומניה')).toBe('יש להסיר רווח לפני כל פסיק בשדה מוצא.')

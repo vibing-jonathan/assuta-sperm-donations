@@ -218,7 +218,7 @@ export function DonorManagement({
               </thead>
               <tbody>
                 {visibleDonors.map((donor) => (
-                  <tr key={donor.id}>
+                  <tr className={displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : undefined} key={donor.id}>
                     <th scope="row">{displayedDonorMetadata(donor).donorNumber}</th>
                     <td><span className={`cmv-chip ${displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'genetic-carrier-safe' : 'genetic-carrier-alert'}`}>{displayedDonorMetadata(donor).geneticCarrierStatus}</span></td>
                     <td>{donor.occupation || '—'}</td><td>{donor.origin || '—'}</td><td>{donor.religion || '—'}</td>
@@ -246,7 +246,7 @@ export function DonorManagement({
           </div>
           <div className="mobile-donor-list" aria-label="כרטיסי תורמים">
             {visibleDonors.map((donor) => (
-              <article className="mobile-donor-card" key={`mobile-${donor.id}`}>
+              <article className={`mobile-donor-card ${displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : ''}`} key={`mobile-${donor.id}`}>
                 <details>
                   <summary>
                     <div className="mobile-donor-card-heading">

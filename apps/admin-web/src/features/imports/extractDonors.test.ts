@@ -57,7 +57,8 @@ describe('hybrid extraction orchestration', () => {
   }
 
   it('uses the deterministic parser without contacting Gemini when confidence passes', async () => {
-    vi.mocked(extractDonorsDeterministically).mockResolvedValue({ donors: [donor], warnings: [] })
+    const negativeDonor = { ...donor, geneticCarrierStatus: 'שלילי' as const }
+    vi.mocked(extractDonorsDeterministically).mockResolvedValue({ donors: [negativeDonor], warnings: [] })
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
 
@@ -65,7 +66,7 @@ describe('hybrid extraction orchestration', () => {
 
     expect(result).toMatchObject({
       extractionMethod: 'deterministic', parserVersion: 'donor-table-v2',
-      fallbackReason: null, model: 'donor-table-v2', donors: [donor],
+      fallbackReason: null, model: 'donor-table-v2', donors: [negativeDonor],
     })
     expect(fetchSpy).not.toHaveBeenCalled()
   })
