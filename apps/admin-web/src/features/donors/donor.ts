@@ -40,7 +40,13 @@ export function validateDonor(input: DonorInput) {
   return null
 }
 
-export type DonorValidationField = 'donorNumber' | 'heightMeters' | 'weightKg' | 'cmvIgg'
+export type DonorValidationField =
+  | 'donorNumber'
+  | 'occupation'
+  | DonorListField
+  | 'heightMeters'
+  | 'weightKg'
+  | 'cmvIgg'
 
 export type DonorValidationErrors = Partial<Record<DonorValidationField, string>>
 
@@ -60,6 +66,13 @@ export function validateImportDonor(input: DonorInput): DonorValidationErrors {
   if (!donorNumber) errors.donorNumber = 'חובה להזין מספר תורם.'
   else if (donorNumber.length > 100) errors.donorNumber = 'מספר התורם ארוך מדי (עד 100 תווים).'
 
+  if (input.occupation.length > 200) errors.occupation = 'שדה העיסוק ארוך מדי (עד 200 תווים).'
+  const listFields: DonorListField[] = ['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor']
+  for (const field of listFields) {
+    const fieldError = verifyListField(field, input[field])
+    if (fieldError) errors[field] = fieldError
+  }
+
   if (input.heightMeters === null || !Number.isFinite(input.heightMeters)) {
     errors.heightMeters = 'חובה להזין גובה.'
   } else if (input.heightMeters < 1 || input.heightMeters > 2.5) {
@@ -77,3 +90,4 @@ export function validateImportDonor(input: DonorInput): DonorValidationErrors {
   }
   return errors
 }
+import { verifyListField, type DonorListField } from './donorFieldRules'

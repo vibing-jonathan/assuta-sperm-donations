@@ -1,9 +1,10 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 import type { DonorInput } from '../donors/donor'
+import { normalizeExtractedDonor } from '../donors/donorFieldRules'
 import type { PdfScanResult } from './scanDonorPdf'
 
-export const DETERMINISTIC_PARSER_VERSION = 'donor-table-v1'
+export const DETERMINISTIC_PARSER_VERSION = 'donor-table-v2'
 
 export type DeterministicFallbackReason =
   | 'text_layer_unavailable'
@@ -136,11 +137,17 @@ function groupAnchorLines(items: PositionedPdfText[]) {
   return groups
 }
 
-function joinCell(items: PositionedPdfText[]) {
-  return normalizeText([...items]
-    .sort((left, right) => Math.abs(right.y - left.y) > 2 ? right.y - left.y : right.x - left.x)
-    .map((item) => item.text)
-    .join(' '))
+const listFieldColumns = new Set<ColumnKey>(['origin', 'religion', 'skinColor', 'eyeColor', 'hairColor'])
+
+function joinCell(items: PositionedPdfText[], preserveListLines = false) {
+  const lines = groupAnchorLines(items)
+    .sort((left, right) => right.y - left.y)
+    .map((line) => normalizeText([...line.items]
+      .sort((left, right) => right.x - left.x)
+      .map((item) => item.text)
+      .join(' ')))
+    .filter(Boolean)
+  return normalizeText(lines.join(preserveListLines ? ', ' : ' '))
 }
 
 function parseNumber(value: string) {
@@ -200,7 +207,7 @@ function parsePage(page: PositionedPdfPage) {
     const populatedColumns = [...cells.values()].filter((cellItems) => joinCell(cellItems)).length
     if (populatedColumns < 5) throw new DeterministicExtractionFailure('unsupported_layout')
 
-    const text = (key: ColumnKey) => joinCell(cells.get(key) ?? [])
+    const text = (key: ColumnKey) => joinCell(cells.get(key) ?? [], listFieldColumns.has(key))
     const heightText = text('heightMeters')
     const weightText = text('weightKg')
     const cmvText = text('cmvIgg')
@@ -211,7 +218,7 @@ function parsePage(page: PositionedPdfPage) {
     if (weightText && weightKg === null) warnings.push(`עמוד ${page.pageNumber}, שורה ${rowIndex + 1}: המשקל לא זוהה.`)
     if (cmvText && !cmvIgg) warnings.push(`עמוד ${page.pageNumber}, שורה ${rowIndex + 1}: תוצאת CMV IgG לא זוהתה.`)
 
-    return {
+    return normalizeExtractedDonor({
       donorNumber: text('donorNumber'),
       occupation: text('occupation'),
       origin: text('origin'),
@@ -222,7 +229,7 @@ function parsePage(page: PositionedPdfPage) {
       heightMeters,
       weightKg,
       cmvIgg,
-    }
+    })
   })
 
   if (donors.some((donor) => !donor.donorNumber || !/\d/.test(donor.donorNumber) || donor.donorNumber.length > 100)) {

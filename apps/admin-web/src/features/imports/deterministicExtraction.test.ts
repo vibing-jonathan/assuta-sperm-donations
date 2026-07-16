@@ -86,4 +86,16 @@ describe('deterministic donor table extraction', () => {
     expect(result.donors[0]?.cmvIgg).toBe('')
     expect(result.warnings).toContain('עמוד 2, שורה 1: תוצאת CMV IgG לא זוהתה.')
   })
+
+  it('preserves separate PDF lines as delimiters for multi-value fields', () => {
+    const page = fixturePage()
+    page.items = page.items.filter((entry) => entry.text !== 'ספרדי')
+    page.items.push(
+      item('רוסיה, רומניה', anchorX.origin, 820),
+      item('בלרוס, רוסי', anchorX.origin, 800),
+    )
+
+    const result = parseDeterministicTablePages([page])
+    expect(result.donors[0]?.origin).toBe('רוסיה, רומניה, בלרוס')
+  })
 })

@@ -64,8 +64,8 @@ describe('hybrid extraction orchestration', () => {
     const result = await extractDonors(new File(['fixture'], 'fixture.pdf'), range)
 
     expect(result).toMatchObject({
-      extractionMethod: 'deterministic', parserVersion: 'donor-table-v1',
-      fallbackReason: null, model: 'donor-table-v1', donors: [donor],
+      extractionMethod: 'deterministic', parserVersion: 'donor-table-v2',
+      fallbackReason: null, model: 'donor-table-v2', donors: [donor],
     })
     expect(fetchSpy).not.toHaveBeenCalled()
   })
@@ -76,7 +76,9 @@ describe('hybrid extraction orchestration', () => {
     )
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ donors: [donor], warnings: [], model: 'gemini-test' }),
+      json: vi.fn().mockResolvedValue({
+        donors: [{ ...donor, origin: 'ארה " ב,פולין' }], warnings: [], model: 'gemini-test',
+      }),
     }))
     const onFallback = vi.fn()
 
@@ -84,8 +86,9 @@ describe('hybrid extraction orchestration', () => {
 
     expect(onFallback).toHaveBeenCalledWith('columns_ambiguous')
     expect(result).toMatchObject({
-      extractionMethod: 'gemini-fallback', parserVersion: 'donor-table-v1',
-      fallbackReason: 'columns_ambiguous', model: 'gemini-test', donors: [donor],
+      extractionMethod: 'gemini-fallback', parserVersion: 'donor-table-v2',
+      fallbackReason: 'columns_ambiguous', model: 'gemini-test',
+      donors: [expect.objectContaining({ origin: 'ארה"ב, פולין' })],
     })
   })
 })

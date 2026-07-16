@@ -1,4 +1,5 @@
 import type { DonorInput } from '../donors/donor'
+import { normalizeExtractedDonor } from '../donors/donorFieldRules'
 import { auth } from '../../lib/firebase'
 import {
   DETERMINISTIC_PARSER_VERSION,
@@ -114,6 +115,7 @@ export async function extractDonors(
     const extracted = await extractDonorsDeterministically(file, range)
     return {
       ...extracted,
+      donors: extracted.donors.map(normalizeExtractedDonor),
       model: DETERMINISTIC_PARSER_VERSION,
       extractionMethod: 'deterministic',
       parserVersion: DETERMINISTIC_PARSER_VERSION,
@@ -128,6 +130,7 @@ export async function extractDonors(
     const extracted = await extractDonorsWithGemini(file, range)
     return {
       ...extracted,
+      donors: extracted.donors.map(normalizeExtractedDonor),
       extractionMethod: 'gemini-fallback',
       parserVersion: DETERMINISTIC_PARSER_VERSION,
       extractionDurationMs: Date.now() - startedAt,

@@ -399,7 +399,7 @@ export function PdfImport({
                       </td>
                       <th scope="row">{index + 1}</th>
                       {editableTextFields.map(({ key, label }) => {
-                        const fieldError = key === 'donorNumber' ? row.errors.donorNumber : undefined
+                        const fieldError = row.errors[key as keyof typeof row.errors]
                         return (
                           <td key={key}>
                             <label className="sr-only" htmlFor={`${row.id}-${key}`}>{label}, שורה {index + 1}</label>
@@ -468,7 +468,7 @@ export function PdfImport({
                     <summary>פרטים ועריכה <span aria-hidden="true">⌄</span></summary>
                     <div className="mobile-review-fields">
                       {editableTextFields.map(({ key, label }) => {
-                        const fieldError = key === 'donorNumber' ? row.errors.donorNumber : undefined
+                        const fieldError = row.errors[key as keyof typeof row.errors]
                         return (
                           <label className={key === 'donorNumber' ? 'full-mobile-field' : undefined} key={key}>
                             <span>{label}</span>

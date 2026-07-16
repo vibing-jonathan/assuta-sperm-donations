@@ -9,12 +9,12 @@ import type { PdfScanResult } from './scanDonorPdf'
 
 const scanResult = { startPage: 2, endPage: 4, pageCount: 3, totalPages: 8, scannedPages: 5 }
 const deterministicMetadata = {
-  model: 'donor-table-v1', extractionMethod: 'deterministic' as const,
-  parserVersion: 'donor-table-v1', extractionDurationMs: 320, fallbackReason: null,
+  model: 'donor-table-v2', extractionMethod: 'deterministic' as const,
+  parserVersion: 'donor-table-v2', extractionDurationMs: 320, fallbackReason: null,
 }
 const fallbackMetadata = {
   model: 'gemini-test', extractionMethod: 'gemini-fallback' as const,
-  parserVersion: 'donor-table-v1', extractionDurationMs: 1450,
+  parserVersion: 'donor-table-v2', extractionDurationMs: 1450,
   fallbackReason: 'columns_ambiguous' as const,
 }
 const validDonor = (donorNumber: string, overrides: Partial<DonorInput> = {}): DonorInput => ({
@@ -144,7 +144,7 @@ describe('PDF import approval workflow', () => {
     await waitFor(() => expect(importApproved).toHaveBeenCalledWith(expect.objectContaining({
       sourceFileName: 'fixture.pdf', startPage: 2, endPage: 4, pageCount: 3,
       model: 'gemini-test', extractionMethod: 'gemini-fallback',
-      parserVersion: 'donor-table-v1', extractionDurationMs: 1450,
+      parserVersion: 'donor-table-v2', extractionDurationMs: 1450,
       fallbackReason: 'columns_ambiguous', adminEmail: 'jgabbayj@gmail.com',
       warnings: ['גובה בשורה האחרונה לא היה קריא'],
       donors: [expect.objectContaining({ donorNumber: 'C-3', heightMeters: 1.77, weightKg: 72, cmvIgg: 'חיובי' })],

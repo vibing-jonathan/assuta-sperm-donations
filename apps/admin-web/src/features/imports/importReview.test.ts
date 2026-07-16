@@ -36,6 +36,17 @@ describe('import review analysis', () => {
     })
   })
 
+  it('returns row-specific errors for malformed multi-value fields', () => {
+    const [row] = analyzeReviewRows(createReviewRows([
+      donor('A-3', { origin: 'רוסיה,רומניה', religion: 'יהודי, יהודי' }),
+    ]), new Set())
+
+    expect(row?.errors).toMatchObject({
+      origin: 'יש להוסיף רווח אחרי כל פסיק בשדה מוצא.',
+      religion: 'השדה דת מכיל ערכים כפולים.',
+    })
+  })
+
   it('excludes manually deselected rows', () => {
     const rows = createReviewRows([donor('1'), donor('2')])
     rows[1]!.selected = false
