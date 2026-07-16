@@ -7,6 +7,7 @@ import { onRequest } from 'firebase-functions/v2/https'
 
 import { getAllowedAdminEmail } from './admin.js'
 import { extractionJsonSchema, parseExtractionResponse } from './extractionSchema.js'
+import { geminiGenerationConfig } from './geminiConfig.js'
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY')
 const MAX_RELEVANT_PDF_BYTES = 8 * 1024 * 1024
@@ -131,6 +132,7 @@ export const extractDonorsFromPdf = onRequest({
         mime_type: 'application/json',
         schema: extractionJsonSchema,
       },
+      generation_config: geminiGenerationConfig,
     })
     if (!interaction.output_text) throw new Error('Gemini returned an empty extraction response.')
     extractionStage = 'response_validation'
