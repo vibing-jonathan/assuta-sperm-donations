@@ -46,7 +46,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'ייבוא קבצים' }))
     expect(screen.getByRole('heading', { level: 1, name: 'ייבוא תורמים מקובץ' })).toBeInTheDocument()
-    expect(screen.getByText('חילוץ עם Gemini מסומן כברירת מחדל.')).toBeInTheDocument()
+    expect(screen.getByText('המערכת מנסה תחילה חילוץ מקומי מהיר.')).toBeInTheDocument()
   })
 
   it('prevents in-app navigation and sign-out during extraction', async () => {
@@ -69,6 +69,6 @@ describe('App', () => {
       expect(screen.getAllByRole('button', { name: 'תורמים' }).every((button) => button.hasAttribute('disabled'))).toBe(true)
       expect(screen.getByRole('button', { name: 'יציאה' })).toBeDisabled()
     })
-    expect(screen.getByRole('heading', { name: 'מחלץ את הנתונים ישירות עם Gemini' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'קורא את טבלת התורמים באופן מקומי' })).toBeInTheDocument()
   })
 })

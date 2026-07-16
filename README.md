@@ -64,8 +64,8 @@ second donor with the same number. Deleting a donor also removes its matching cl
 
 The importer first parses the stable catalog table locally from PDF text coordinates. If its strict
 header, column, or row confidence checks fail, it automatically falls back to the protected Gemini
-Function. The Gemini override is selected by default; administrators can clear it to try the local
-parser first. Audit records distinguish forced Gemini from an automatic fallback. All paths run
+Function. Administrators can select the Gemini override to bypass the local parser when needed.
+Audit records distinguish forced Gemini from an automatic fallback. All paths run
 through local, field-specific normalization before review: PDF line-aware
 list reconstruction, canonical Hebrew punctuation and comma spacing, empty-token removal, and exact
 duplicate removal. Semantic values are unrestricted; only malformed field structure is reported as a

@@ -71,7 +71,7 @@ export function PdfImport({
   const [isScanning, setIsScanning] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionPhase, setExtractionPhase] = useState<ExtractionPhase>('deterministic')
-  const [forceGemini, setForceGemini] = useState(true)
+  const [forceGemini, setForceGemini] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null)
   const [rows, setRows] = useState<ReviewRow[]>([])
@@ -262,8 +262,8 @@ export function PdfImport({
       <aside className="import-notice">
         <span aria-hidden="true">ⓘ</span>
         <div>
-          <strong>חילוץ עם Gemini מסומן כברירת מחדל.</strong>
-          <p>אפשר לבטל את הסימון כדי לנסות תחילה חילוץ מקומי מהיר; אם מבנה הטבלה אינו מזוהה בביטחון, המערכת עדיין תעבור אוטומטית ל-Gemini.</p>
+          <strong>המערכת מנסה תחילה חילוץ מקומי מהיר.</strong>
+          <p>אם מבנה הטבלה אינו מזוהה בביטחון, המערכת עוברת אוטומטית ל-Gemini. אפשר לסמן חילוץ ישיר עם Gemini לפני ההפעלה.</p>
         </div>
       </aside>
 

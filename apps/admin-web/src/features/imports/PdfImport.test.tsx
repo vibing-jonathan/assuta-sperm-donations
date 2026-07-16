@@ -58,7 +58,6 @@ describe('PDF import approval workflow', () => {
 
     upload(container)
     await act(async () => { await Promise.resolve() })
-    fireEvent.click(screen.getByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ }))
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
     await act(async () => { await Promise.resolve() })
     expect(screen.getByRole('heading', { name: 'קורא את טבלת התורמים באופן מקומי' })).toBeInTheDocument()
@@ -91,13 +90,12 @@ describe('PDF import approval workflow', () => {
     )
 
     upload(container)
-    fireEvent.click(await screen.findByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ }))
     fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
     expect(await screen.findByRole('heading', { name: 'מבנה הטבלה השתנה — עוברים לחילוץ עם Gemini' })).toBeInTheDocument()
     expect(screen.getByText(/Gemini נמשך בדרך כלל 1–2 דקות/)).toBeInTheDocument()
   })
 
-  it('forces Gemini by default and skips the local extraction phase', async () => {
+  it('lets an administrator force Gemini and skip the local extraction phase', async () => {
     const extractPdf = vi.fn((_file: File, _range: PdfScanResult): Promise<ExtractionResult> => new Promise(() => undefined))
     const { container } = render(
       <PdfImport
@@ -110,7 +108,8 @@ describe('PDF import approval workflow', () => {
 
     upload(container)
     const forceGemini = await screen.findByRole('checkbox', { name: /חילוץ ישירות עם Gemini/ })
-    expect(forceGemini).toBeChecked()
+    expect(forceGemini).not.toBeChecked()
+    fireEvent.click(forceGemini)
     fireEvent.click(screen.getByRole('button', { name: 'חילוץ נתונים' }))
 
     expect(extractPdf).toHaveBeenCalledWith(
