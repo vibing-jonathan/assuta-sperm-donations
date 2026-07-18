@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { PDFDocument } from 'pdf-lib'
 
 import {
-  createDonorDetailPdf,
+  createDonorPdfGenerationHeader,
   detailPageNumbers,
   donorDetailPdfStoragePath,
+  mapDonorPdfGenerationError,
   pageMatchesDonor,
 } from './donorPageImages'
 
@@ -26,18 +26,23 @@ describe('donor detail PDF', () => {
     expect(pageMatchesDonor('Carson - 1314', 'Tommy 1341')).toBe(false)
   })
 
-  it('copies exactly the selected three pages into a standalone PDF', async () => {
-    const source = await PDFDocument.create()
-    Array.from({ length: 5 }, (_, index) => source.addPage([200 + index, 300 + index]))
+  it('prefixes the single catalog upload with bounded generation metadata', () => {
+    const sources = [{ sourceIndex: 2, sourceDonorNumber: '1314***', donorNumber: '1314' }]
+    const header = createDonorPdfGenerationHeader(8, sources)
+    const metadataLength = new DataView(header.buffer).getUint32(0)
+    const metadata = JSON.parse(new TextDecoder().decode(header.subarray(4)))
 
-    const bytes = await createDonorDetailPdf(source, [2, 3, 4])
-    const detail = await PDFDocument.load(bytes)
-
-    expect(detail.getPageCount()).toBe(3)
-    expect(detail.getPages().map((page) => page.getWidth())).toEqual([201, 202, 203])
+    expect(metadataLength).toBe(header.byteLength - 4)
+    expect(metadata).toEqual({ summaryEndPage: 8, sources })
   })
 
   it('uses a stable non-identifying Storage folder key', () => {
     expect(donorDetailPdfStoragePath('D-5000')).toMatch(/^donor-pages\/[a-f0-9]+\/details\.pdf$/)
+  })
+
+  it('maps safe generation errors without exposing server diagnostics', () => {
+    expect(mapDonorPdfGenerationError(401, 'INVALID_AUTHENTICATION')).toContain('להתחבר מחדש')
+    expect(mapDonorPdfGenerationError(400, 'INVALID_PDF_GENERATION_REQUEST')).toContain('עמודי המידע')
+    expect(mapDonorPdfGenerationError(500, 'PDF_GENERATION_FAILED')).toContain('רשומות התורמים נשמרו')
   })
 })

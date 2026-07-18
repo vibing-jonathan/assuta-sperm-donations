@@ -10,6 +10,11 @@ import { getAllowedAdminEmail } from './admin.js'
 import { deleteAllDonorRecords } from './deleteDonors.js'
 import { deleteDonorPageImages } from './donorPages.js'
 import { extractionJsonSchema, parseExtractionResponse } from './extractionSchema.js'
+import {
+  generateAndStoreDonorPdfs,
+  InvalidDonorPdfRequestError,
+  readDonorPdfGenerationRequest,
+} from './generateDonorPdfs.js'
 import { geminiGenerationConfig } from './geminiConfig.js'
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY')
@@ -177,6 +182,76 @@ export const cleanupDonorPagesOnDelete = onDocumentDeleted({
     donorId: event.params.donorId,
     deletedObjectCount,
   })
+})
+
+export const generateDonorDetailPdfs = onRequest({
+  region: 'europe-west1',
+  timeoutSeconds: 540,
+  memory: '1GiB',
+  maxInstances: 2,
+  invoker: 'public',
+  cors: true,
+}, async (request, response) => {
+  if (request.method !== 'POST') {
+    response.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
+    return
+  }
+
+  const authorization = request.get('authorization')
+  if (!authorization?.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'AUTHENTICATION_REQUIRED' })
+    return
+  }
+
+  let decodedToken
+  try {
+    decodedToken = await getAuth().verifyIdToken(authorization.slice('Bearer '.length), true)
+  } catch {
+    response.status(401).json({ error: 'INVALID_AUTHENTICATION' })
+    return
+  }
+  const adminEmail = getAllowedAdminEmail({ token: decodedToken })
+  if (!adminEmail) {
+    response.status(403).json({ error: 'ADMIN_ACCESS_REQUIRED' })
+    return
+  }
+
+  let input
+  try {
+    input = readDonorPdfGenerationRequest(request.rawBody)
+  } catch (error) {
+    logger.warn('Invalid donor PDF generation request.', {
+      adminEmail,
+      ...readErrorDiagnostics(error),
+    })
+    response.status(400).json({ error: 'INVALID_PDF_GENERATION_REQUEST' })
+    return
+  }
+
+  try {
+    const result = await generateAndStoreDonorPdfs(input)
+    logger.info('Donor detail PDFs generated.', {
+      adminEmail,
+      donorCount: result.uploadedDonorCount,
+      sourcePdfBytes: result.sourcePdfBytes,
+      generatedPdfBytes: result.generatedPdfBytes,
+    })
+    response.status(200).json(result)
+  } catch (error) {
+    if (error instanceof InvalidDonorPdfRequestError) {
+      logger.warn('Donor PDF generation validation failed.', {
+        adminEmail,
+        ...readErrorDiagnostics(error),
+      })
+      response.status(400).json({ error: 'INVALID_PDF_GENERATION_REQUEST' })
+      return
+    }
+    logger.error('Donor PDF generation failed.', {
+      adminEmail,
+      ...readErrorDiagnostics(error),
+    })
+    response.status(500).json({ error: 'PDF_GENERATION_FAILED' })
+  }
 })
 
 export const deleteAllDonors = onCall({

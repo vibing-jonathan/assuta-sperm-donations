@@ -90,12 +90,13 @@ record remain below Firestore's 500-write transaction limit.
 ### Donor detail pages
 
 After the donor records are approved, the browser verifies the three consecutive detail pages for
-every selected donor and copies them into a separate three-page PDF without rasterizing them. The
+every selected donor and uploads the original catalog once to an authenticated Firebase Function.
+The Function copies each donor's pages into a separate three-page PDF without rasterizing them. The
 expected donor number must appear in all three PDF text layers before upload, preventing a shifted
 catalog page from being attached to the wrong donor. Each file is stored at
 `donor-pages/{normalizedDonorKey}/details.pdf` in Firebase Storage. Only approved administrators can
-upload, replace, delete, or view it. The donor dashboard loads the PDF on demand and provides a link
-to open it in a new window. If PDF upload fails
+request generation or view it; direct client writes are denied. The donor dashboard loads the PDF on
+demand and provides a link to open it in a new window. If PDF upload fails
 after the atomic Firestore import, the success screen keeps a separate retry action without repeating
 the donor import. Deleting a donor record triggers backend cleanup of its stored PDF and any legacy
 page images; the cleanup is idempotent and retries transient Storage failures.

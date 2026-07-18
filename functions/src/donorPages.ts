@@ -8,7 +8,7 @@ function normalizeDonorNumber(value: string) {
   return value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('he')
 }
 
-function donorStorageKey(value: string) {
+export function donorStorageKey(value: string) {
   return Buffer.from(normalizeDonorNumber(value), 'utf8').toString('hex')
 }
 
