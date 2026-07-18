@@ -3,9 +3,11 @@ import { getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { logger } from 'firebase-functions'
 import { defineSecret } from 'firebase-functions/params'
+import { onDocumentDeleted } from 'firebase-functions/v2/firestore'
 import { onRequest } from 'firebase-functions/v2/https'
 
 import { getAllowedAdminEmail } from './admin.js'
+import { deleteDonorPageImages } from './donorPages.js'
 import { extractionJsonSchema, parseExtractionResponse } from './extractionSchema.js'
 import { geminiGenerationConfig } from './geminiConfig.js'
 
@@ -154,4 +156,24 @@ export const extractDonorsFromPdf = onRequest({
     })
     response.status(500).json({ error: 'EXTRACTION_FAILED' })
   }
+})
+
+export const cleanupDonorPagesOnDelete = onDocumentDeleted({
+  document: 'donors/{donorId}',
+  region: 'europe-west1',
+  retry: true,
+}, async (event) => {
+  const donorNumber = event.data?.get('donorNumber')
+  if (typeof donorNumber !== 'string' || !donorNumber.trim()) {
+    logger.warn('Deleted donor did not contain a usable donor number.', {
+      donorId: event.params.donorId,
+    })
+    return
+  }
+
+  const deletedObjectCount = await deleteDonorPageImages(donorNumber)
+  logger.info('Deleted donor page images.', {
+    donorId: event.params.donorId,
+    deletedObjectCount,
+  })
 })

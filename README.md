@@ -96,7 +96,8 @@ Images are stored at `donor-pages/{normalizedDonorKey}/page-1.jpg` through `page
 Storage. Only approved administrators can upload, replace, delete, or view them. The donor dashboard
 loads the three images on demand and provides a full-size link for each page. If image upload fails
 after the atomic Firestore import, the success screen keeps a separate retry action without repeating
-the donor import.
+the donor import. Deleting a donor record triggers backend cleanup of all three stored page images;
+the cleanup is idempotent and retries transient Storage failures.
 
 ### Shared user-app access
 
