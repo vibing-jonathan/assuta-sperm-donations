@@ -4,9 +4,10 @@ import { getAuth } from 'firebase-admin/auth'
 import { logger } from 'firebase-functions'
 import { defineSecret } from 'firebase-functions/params'
 import { onDocumentDeleted } from 'firebase-functions/v2/firestore'
-import { onRequest } from 'firebase-functions/v2/https'
+import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 
 import { getAllowedAdminEmail } from './admin.js'
+import { deleteAllDonorRecords } from './deleteDonors.js'
 import { deleteDonorPageImages } from './donorPages.js'
 import { extractionJsonSchema, parseExtractionResponse } from './extractionSchema.js'
 import { geminiGenerationConfig } from './geminiConfig.js'
@@ -176,4 +177,26 @@ export const cleanupDonorPagesOnDelete = onDocumentDeleted({
     donorId: event.params.donorId,
     deletedObjectCount,
   })
+})
+
+export const deleteAllDonors = onCall({
+  region: 'europe-west1',
+  timeoutSeconds: 540,
+  memory: '256MiB',
+  maxInstances: 1,
+}, async (request) => {
+  const adminEmail = getAllowedAdminEmail(request.auth)
+  if (!adminEmail) throw new HttpsError('permission-denied', 'Administrator access is required.')
+
+  try {
+    const result = await deleteAllDonorRecords()
+    logger.info('Bulk donor deletion completed.', { adminEmail, ...result })
+    return result
+  } catch (error) {
+    logger.error('Bulk donor deletion failed.', {
+      adminEmail,
+      ...readErrorDiagnostics(error),
+    })
+    throw new HttpsError('internal', 'Bulk donor deletion failed.')
+  }
 })

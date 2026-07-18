@@ -98,6 +98,9 @@ loads the three images on demand and provides a full-size link for each page. If
 after the atomic Firestore import, the success screen keeps a separate retry action without repeating
 the donor import. Deleting a donor record triggers backend cleanup of all three stored page images;
 the cleanup is idempotent and retries transient Storage failures.
+The donor dashboard also provides a confirmation-protected bulk deletion action. Its admin-only
+callable Function deletes donors and uniqueness claims in bounded Firestore batches; image cleanup
+continues through the same deletion trigger.
 
 ### Shared user-app access
 

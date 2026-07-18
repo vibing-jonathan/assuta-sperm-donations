@@ -44,11 +44,14 @@ export function DonorManagement({
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isRemovingAll, setIsRemovingAll] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [donorPendingDelete, setDonorPendingDelete] = useState<Donor | null>(null)
   const [donorPendingView, setDonorPendingView] = useState<Donor | null>(null)
+  const [isRemoveAllOpen, setIsRemoveAllOpen] = useState(false)
+  const [removeAllError, setRemoveAllError] = useState<string | null>(null)
 
   const visibleDonors = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -89,16 +92,17 @@ export function DonorManagement({
   }, [repository])
 
   useEffect(() => {
-    if (!isFormOpen && !donorPendingDelete && !donorPendingView) return
+    if (!isFormOpen && !donorPendingDelete && !donorPendingView && !isRemoveAllOpen) return
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
       setIsFormOpen(false)
       setDonorPendingDelete(null)
       setDonorPendingView(null)
+      if (!isRemovingAll) setIsRemoveAllOpen(false)
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [donorPendingDelete, donorPendingView, isFormOpen])
+  }, [donorPendingDelete, donorPendingView, isFormOpen, isRemoveAllOpen, isRemovingAll])
 
   useEffect(() => {
     function closeRowActionsOnOutsideClick(event: MouseEvent) {
@@ -165,6 +169,20 @@ export function DonorManagement({
     }
   }
 
+  async function removeAllDonors() {
+    setIsRemovingAll(true)
+    setRemoveAllError(null)
+    setError(null)
+    try {
+      await repository.removeAll()
+      setIsRemoveAllOpen(false)
+    } catch {
+      setRemoveAllError('מחיקת כל התורמים לא הושלמה. ניתן לנסות שוב; רשומות שכבר נמחקו לא יימחקו פעמיים.')
+    } finally {
+      setIsRemovingAll(false)
+    }
+  }
+
   return (
     <div className="donor-workspace">
       <header className="workspace-header">
@@ -173,10 +191,24 @@ export function DonorManagement({
           <h1>ניהול תורמים</h1>
           <p>מאגר תורמי הזרע של המרכז הרפואי</p>
         </div>
-        <button className="primary-button add-donor-button" type="button" onClick={() => setIsFormOpen(true)}>
-          <span aria-hidden="true">＋</span>
-          הוספת תורם
-        </button>
+        <div className="workspace-actions">
+          <button className="primary-button add-donor-button" type="button" onClick={() => setIsFormOpen(true)}>
+            <span aria-hidden="true">＋</span>
+            הוספת תורם
+          </button>
+          <button
+            className="remove-all-donors-button"
+            type="button"
+            disabled={isLoading || donors.length === 0}
+            onClick={() => {
+              setRemoveAllError(null)
+              setIsRemoveAllOpen(true)
+            }}
+          >
+            <span aria-hidden="true">⌫</span>
+            מחיקת כל התורמים
+          </button>
+        </div>
       </header>
 
       <section className="summary-grid" aria-label="סיכום מאגר התורמים">
@@ -396,6 +428,35 @@ export function DonorManagement({
                 <span aria-hidden="true">⌫</span> {isDeleting ? 'מוחק…' : 'מחיקת תורם'}
               </button>
               <button className="secondary-button" autoFocus disabled={isDeleting} type="button" onClick={() => setDonorPendingDelete(null)}>ביטול</button>
+            </footer>
+          </section>
+        </div>
+      )}
+
+      {isRemoveAllOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => !isRemovingAll && setIsRemoveAllOpen(false)}>
+          <section
+            className="donor-dialog delete-dialog bulk-delete-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="bulk-delete-dialog-title"
+            aria-describedby="bulk-delete-dialog-description"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="dialog-header">
+              <h2 id="bulk-delete-dialog-title">מחיקת כל התורמים</h2>
+              <button className="dialog-close" type="button" aria-label="סגירת החלון" disabled={isRemovingAll} onClick={() => setIsRemoveAllOpen(false)}>×</button>
+            </header>
+            <div className="delete-dialog-body">
+              <p id="bulk-delete-dialog-description">האם למחוק את כל <strong>{donors.length}</strong> התורמים מהמאגר?</p>
+              <p className="delete-warning"><span aria-hidden="true">⚠</span> הפעולה תמחק גם את עמודי המידע השמורים ולא ניתן לבטל אותה.</p>
+              {removeAllError && <p className="dialog-error" role="alert">{removeAllError}</p>}
+            </div>
+            <footer className="dialog-footer">
+              <button className="danger-button" disabled={isRemovingAll} type="button" onClick={() => void removeAllDonors()}>
+                <span aria-hidden="true">⌫</span> {isRemovingAll ? 'מוחק את כל התורמים…' : 'כן, למחוק את כולם'}
+              </button>
+              <button className="secondary-button" autoFocus disabled={isRemovingAll} type="button" onClick={() => setIsRemoveAllOpen(false)}>ביטול</button>
             </footer>
           </section>
         </div>

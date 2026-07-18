@@ -1,6 +1,6 @@
 import type { DocumentData, QueryDocumentSnapshot, Unsubscribe } from 'firebase/firestore'
 
-import { getDatabase } from '../../lib/firebase'
+import { firebaseApp, getDatabase } from '../../lib/firebase'
 import { donorNumberClaimId, normalizeDonorNumber, type Donor, type DonorInput } from './donor'
 import { parseDonorNumberMetadata } from './donorNumberMetadata'
 
@@ -11,10 +11,16 @@ export class DuplicateDonorNumberError extends Error {
   }
 }
 
+export interface RemoveAllDonorsResult {
+  deletedDonorCount: number
+  deletedClaimCount: number
+}
+
 export interface DonorRepository {
   subscribe(onData: (donors: Donor[]) => void, onError: (error: Error) => void): Promise<Unsubscribe>
   add(input: DonorInput, adminEmail: string): Promise<void>
   remove(id: string, donorNumber: string): Promise<void>
+  removeAll(): Promise<RemoveAllDonorsResult>
 }
 
 function toDonor(snapshot: QueryDocumentSnapshot<DocumentData>): Donor {
@@ -83,5 +89,14 @@ export const firestoreDonorRepository: DonorRepository = {
       transaction.delete(donorReference)
       if (claim.exists() && claim.data().donorId === id) transaction.delete(claimReference)
     })
+  },
+
+  async removeAll() {
+    const { getFunctions, httpsCallable } = await import('firebase/functions')
+    const callable = httpsCallable<undefined, RemoveAllDonorsResult>(
+      getFunctions(firebaseApp, 'europe-west1'),
+      'deleteAllDonors',
+    )
+    return (await callable()).data
   },
 }

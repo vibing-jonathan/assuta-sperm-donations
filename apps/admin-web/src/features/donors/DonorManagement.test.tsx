@@ -14,6 +14,7 @@ function createRepository(donors: Donor[] = []): DonorRepository {
     },
     add: vi.fn(),
     remove: vi.fn(),
+    removeAll: vi.fn().mockResolvedValue({ deletedDonorCount: donors.length, deletedClaimCount: donors.length }),
   }
 }
 
@@ -78,6 +79,25 @@ describe('DonorManagement', () => {
   it('shows the empty database state', async () => {
     render(<DonorManagement adminEmail="admin@example.com" repository={createRepository()} />)
     expect(await screen.findByText('עדיין אין תורמים במאגר')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'מחיקת כל התורמים' })).toBeDisabled()
+  })
+
+  it('requires confirmation before removing all donors', async () => {
+    const donors = [
+      { id: 'donor-1', donorNumber: '1314', occupation: '', origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '', heightMeters: null, weightKg: null, cmvIgg: '', geneticCarrierStatus: 'חיובי' },
+      { id: 'donor-2', donorNumber: '1341', occupation: '', origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '', heightMeters: null, weightKg: null, cmvIgg: '', geneticCarrierStatus: 'חיובי' },
+    ] as Donor[]
+    const repository = createRepository(donors)
+    render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'מחיקת כל התורמים' }))
+    const dialog = screen.getByRole('alertdialog', { name: 'מחיקת כל התורמים' })
+    expect(within(dialog).getByText('2')).toBeInTheDocument()
+    expect(repository.removeAll).not.toHaveBeenCalled()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'כן, למחוק את כולם' }))
+    await waitFor(() => expect(repository.removeAll).toHaveBeenCalledOnce())
+    await waitFor(() => expect(screen.queryByRole('alertdialog', { name: 'מחיקת כל התורמים' })).not.toBeInTheDocument())
   })
 
   it('requires explicit confirmation before deleting a donor', async () => {

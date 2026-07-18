@@ -14,6 +14,7 @@ const repository: DonorRepository = {
   },
   add: vi.fn(),
   remove: vi.fn(),
+  removeAll: vi.fn(),
 }
 
 const userAccessRepository: UserAccessRepository = {
