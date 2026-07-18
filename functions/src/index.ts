@@ -27,6 +27,12 @@ import {
   type ProfileImageTaskPayload,
 } from './donorProfileImages.js'
 import { donorStorageKey } from './donorPages.js'
+import {
+  DonorNotFoundError,
+  InvalidAdminProfileImageError,
+  readAdminProfileImageUpload,
+  storeAdminProfileImage,
+} from './uploadDonorProfileImage.js'
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY')
 const MAX_RELEVANT_PDF_BYTES = 8 * 1024 * 1024
@@ -333,6 +339,65 @@ export const generateDonorDetailPdfs = onRequest({
       ...readErrorDiagnostics(error),
     })
     response.status(500).json({ error: 'PDF_GENERATION_FAILED' })
+  }
+})
+
+export const uploadDonorProfileImage = onRequest({
+  region: 'europe-west1',
+  timeoutSeconds: 60,
+  memory: '256MiB',
+  maxInstances: 3,
+  invoker: 'public',
+  cors: true,
+}, async (request, response) => {
+  if (request.method !== 'POST') {
+    response.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
+    return
+  }
+  const authorization = request.get('authorization')
+  if (!authorization?.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'AUTHENTICATION_REQUIRED' })
+    return
+  }
+  let decodedToken
+  try {
+    decodedToken = await getAuth().verifyIdToken(authorization.slice('Bearer '.length), true)
+  } catch {
+    response.status(401).json({ error: 'INVALID_AUTHENTICATION' })
+    return
+  }
+  const adminEmail = getAllowedAdminEmail({ token: decodedToken })
+  if (!adminEmail) {
+    response.status(403).json({ error: 'ADMIN_ACCESS_REQUIRED' })
+    return
+  }
+
+  try {
+    const upload = readAdminProfileImageUpload(
+      request.get('x-donor-id'),
+      request.get('content-type'),
+      request.rawBody,
+    )
+    const result = await storeAdminProfileImage(upload, adminEmail)
+    logger.info('Administrator replaced a donor profile image.', {
+      adminEmail,
+      donorId: upload.donorId,
+    })
+    response.status(200).json(result)
+  } catch (error) {
+    if (error instanceof InvalidAdminProfileImageError) {
+      response.status(400).json({ error: 'INVALID_PROFILE_IMAGE' })
+      return
+    }
+    if (error instanceof DonorNotFoundError) {
+      response.status(404).json({ error: 'DONOR_NOT_FOUND' })
+      return
+    }
+    logger.error('Administrator profile image upload failed.', {
+      adminEmail,
+      ...readErrorDiagnostics(error),
+    })
+    response.status(500).json({ error: 'PROFILE_IMAGE_UPLOAD_FAILED' })
   }
 })
 

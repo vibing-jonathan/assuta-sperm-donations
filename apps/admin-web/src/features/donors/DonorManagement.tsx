@@ -9,7 +9,11 @@ import {
 import { displayedDonorMetadata } from './donorNumberMetadata'
 import { DonorPageViewer } from './DonorPageViewer'
 import { DonorProfileAvatar } from './DonorProfileAvatar'
-import type { DonorProfileImageRepository } from './donorProfileImageRepository'
+import {
+  storageDonorProfileImageRepository,
+  validateAdminProfileImage,
+  type DonorProfileImageRepository,
+} from './donorProfileImageRepository'
 import type { DonorPageRepository } from './donorPageImages'
 import { DuplicateDonorNumberError, firestoreDonorRepository, type DonorRepository } from './donorRepository'
 
@@ -37,15 +41,34 @@ function isPositiveCmv(value: string) {
   return normalized === 'חיובי' || normalized === 'positive' || normalized === '+'
 }
 
+function editableDonorInput(donor: Donor): DonorInput {
+  return {
+    donorNumber: displayedDonorMetadata(donor).donorNumber,
+    geneticCarrierStatus: displayedDonorMetadata(donor).geneticCarrierStatus,
+    occupation: donor.occupation,
+    origin: donor.origin,
+    religion: donor.religion,
+    skinColor: donor.skinColor,
+    eyeColor: donor.eyeColor,
+    hairColor: donor.hairColor,
+    heightMeters: donor.heightMeters,
+    weightKg: donor.weightKg,
+    cmvIgg: donor.cmvIgg,
+  }
+}
+
 export function DonorManagement({
   adminEmail,
   repository = firestoreDonorRepository,
   pageRepository,
-  profileImageRepository,
+  profileImageRepository = storageDonorProfileImageRepository,
 }: DonorManagementProps) {
   const [donors, setDonors] = useState<Donor[]>([])
   const [form, setForm] = useState<DonorInput>(emptyDonorInput)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingDonor, setEditingDonor] = useState<Donor | null>(null)
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null)
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isRemovingAll, setIsRemovingAll] = useState(false)
@@ -99,14 +122,18 @@ export function DonorManagement({
     if (!isFormOpen && !donorPendingDelete && !donorPendingView && !isRemoveAllOpen) return
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
+      if (isSaving) return
       setIsFormOpen(false)
+      setEditingDonor(null)
+      setProfilePhotoFile(null)
+      setForm(emptyDonorInput)
       setDonorPendingDelete(null)
       setDonorPendingView(null)
       if (!isRemovingAll) setIsRemoveAllOpen(false)
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [donorPendingDelete, donorPendingView, isFormOpen, isRemoveAllOpen, isRemovingAll])
+  }, [donorPendingDelete, donorPendingView, isFormOpen, isRemoveAllOpen, isRemovingAll, isSaving])
 
   useEffect(() => {
     function closeRowActionsOnOutsideClick(event: MouseEvent) {
@@ -121,6 +148,16 @@ export function DonorManagement({
     return () => document.removeEventListener('click', closeRowActionsOnOutsideClick)
   }, [])
 
+  useEffect(() => {
+    if (!profilePhotoFile) {
+      setProfilePhotoPreview(null)
+      return
+    }
+    const preview = URL.createObjectURL(profilePhotoFile)
+    setProfilePhotoPreview(preview)
+    return () => URL.revokeObjectURL(preview)
+  }, [profilePhotoFile])
+
   function updateTextField(key: keyof DonorInput, value: string) {
     setForm((current) => ({ ...current, [key]: value }))
   }
@@ -132,8 +169,33 @@ export function DonorManagement({
   function closeForm() {
     if (isSaving) return
     setForm(emptyDonorInput)
+    setEditingDonor(null)
+    setProfilePhotoFile(null)
     setError(null)
     setIsFormOpen(false)
+  }
+
+  function openDonorForm(donor?: Donor) {
+    setError(null)
+    setEditingDonor(donor ?? null)
+    setProfilePhotoFile(null)
+    setForm(donor ? editableDonorInput(donor) : emptyDonorInput)
+    setIsFormOpen(true)
+  }
+
+  function selectProfilePhoto(file: File | undefined) {
+    if (!file) {
+      setProfilePhotoFile(null)
+      return
+    }
+    const validationError = validateAdminProfileImage(file)
+    if (validationError) {
+      setError(validationError)
+      setProfilePhotoFile(null)
+      return
+    }
+    setError(null)
+    setProfilePhotoFile(file)
   }
 
   async function submitDonor(event: FormEvent<HTMLFormElement>) {
@@ -147,14 +209,28 @@ export function DonorManagement({
 
     setIsSaving(true)
     setError(null)
+    let donorDetailsSaved = false
     try {
-      await repository.add(normalizedForm, adminEmail)
+      if (editingDonor) {
+        await repository.update(editingDonor.id, editingDonor.donorNumber, normalizedForm, adminEmail)
+        donorDetailsSaved = true
+        if (profilePhotoFile) {
+          if (!profileImageRepository.uploadImage) throw new Error('Profile image uploads are unavailable.')
+          await profileImageRepository.uploadImage(editingDonor.id, profilePhotoFile)
+        }
+      } else {
+        await repository.add(normalizedForm, adminEmail)
+      }
       setForm(emptyDonorInput)
+      setEditingDonor(null)
+      setProfilePhotoFile(null)
       setIsFormOpen(false)
     } catch (reason) {
       setError(reason instanceof DuplicateDonorNumberError
         ? 'מספר התורם כבר קיים במאגר.'
-        : 'שמירת התורם נכשלה. בדקו את החיבור ונסו שוב.')
+        : editingDonor && profilePhotoFile && donorDetailsSaved && reason instanceof Error
+          ? `פרטי התורם נשמרו, אך ${reason.message}`
+          : 'שמירת התורם נכשלה. בדקו את החיבור ונסו שוב.')
     } finally {
       setIsSaving(false)
     }
@@ -196,7 +272,7 @@ export function DonorManagement({
           <p>מאגר תורמי הזרע של המרכז הרפואי</p>
         </div>
         <div className="workspace-actions">
-          <button className="primary-button add-donor-button" type="button" onClick={() => setIsFormOpen(true)}>
+          <button className="primary-button add-donor-button" type="button" onClick={() => openDonorForm()}>
             <span aria-hidden="true">＋</span>
             הוספת תורם
           </button>
@@ -293,6 +369,10 @@ export function DonorManagement({
                         <div className="action-menu">
                           <button type="button" onClick={(event) => {
                             event.currentTarget.closest('details')?.removeAttribute('open')
+                            openDonorForm(donor)
+                          }}>עריכת תורם</button>
+                          <button type="button" onClick={(event) => {
+                            event.currentTarget.closest('details')?.removeAttribute('open')
                             setDonorPendingView(donor)
                           }}>צפייה בקובץ המידע</button>
                           <button type="button" onClick={(event) => {
@@ -339,6 +419,7 @@ export function DonorManagement({
                       <div><dt>גובה</dt><dd>{donor.heightMeters ? `${donor.heightMeters} מ׳` : '—'}</dd></div>
                       <div><dt>משקל</dt><dd>{donor.weightKg ? `${donor.weightKg} ק״ג` : '—'}</dd></div>
                     </dl>
+                    <button className="mobile-edit-button" type="button" onClick={() => openDonorForm(donor)}>עריכת תורם</button>
                     <button className="mobile-pages-button" type="button" onClick={() => setDonorPendingView(donor)}>צפייה בקובץ המידע</button>
                     <button className="mobile-delete-button" type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
                   </div>
@@ -369,7 +450,7 @@ export function DonorManagement({
             onSubmit={(event) => void submitDonor(event)}
           >
             <header className="dialog-header">
-              <h2 id="donor-dialog-title">הוספת תורם חדש</h2>
+              <h2 id="donor-dialog-title">{editingDonor ? `עריכת תורם ${displayedDonorMetadata(editingDonor).donorNumber}` : 'הוספת תורם חדש'}</h2>
               <button className="dialog-close" type="button" aria-label="סגירת החלון" onClick={closeForm}>×</button>
             </header>
             <div className="dialog-body">
@@ -380,11 +461,13 @@ export function DonorManagement({
                     <input
                       autoFocus={key === 'donorNumber'}
                       required={key === 'donorNumber'}
+                      readOnly={Boolean(editingDonor && key === 'donorNumber')}
                       value={String(form[key] ?? '')}
                       placeholder={placeholder}
                       onChange={(event) => updateTextField(key, event.target.value)}
                       onBlur={(event) => updateTextField(key, normalizeEditableTextField(key, event.target.value))}
                     />
+                    {editingDonor && key === 'donorNumber' && <small>מספר התורם הוא מזהה קבוע ואינו ניתן לשינוי לאחר השמירה.</small>}
                   </label>
                 ))}
                 <label>
@@ -396,15 +479,44 @@ export function DonorManagement({
                   <input inputMode="decimal" min="30" max="300" step="0.1" type="number" value={form.weightKg ?? ''} onChange={(event) => updateNumberField('weightKg', event.target.value)} />
                 </label>
                 <fieldset className="full-field cmv-field">
+                  <legend>נשאויות גנטיות</legend>
+                  <label><input type="radio" name="carrier-status" checked={form.geneticCarrierStatus === 'חיובי'} onChange={() => setForm((current) => ({ ...current, geneticCarrierStatus: 'חיובי' }))} /> חיובי</label>
+                  <label><input type="radio" name="carrier-status" checked={form.geneticCarrierStatus === 'שלילי'} onChange={() => setForm((current) => ({ ...current, geneticCarrierStatus: 'שלילי' }))} /> שלילי</label>
+                </fieldset>
+                <fieldset className="full-field cmv-field">
                   <legend>סטטוס CMV IgG</legend>
                   <label><input type="radio" name="cmv" checked={form.cmvIgg === 'חיובי'} onChange={() => updateTextField('cmvIgg', 'חיובי')} /> חיובי</label>
                   <label><input type="radio" name="cmv" checked={form.cmvIgg === 'שלילי'} onChange={() => updateTextField('cmvIgg', 'שלילי')} /> שלילי</label>
                 </fieldset>
+                {editingDonor && (
+                  <section className="full-field profile-photo-editor" aria-labelledby="profile-photo-editor-title">
+                    <div>
+                      <strong id="profile-photo-editor-title">תמונת פרופיל</strong>
+                      <small>החלפה ידנית אינה מפעילה את Gemini ואינה כרוכה בעלות יצירת AI.</small>
+                    </div>
+                    <div className="profile-photo-editor-controls">
+                      {profilePhotoPreview
+                        ? <img className="profile-photo-selection" src={profilePhotoPreview} alt="תצוגה מקדימה של התמונה החדשה" />
+                        : <DonorProfileAvatar donor={editingDonor} repository={profileImageRepository} />}
+                      <label className="secondary-button profile-photo-picker">
+                        בחירת תמונת JPEG
+                        <input
+                          className="sr-only"
+                          type="file"
+                          accept="image/jpeg,.jpg,.jpeg"
+                          disabled={isSaving}
+                          onChange={(event) => selectProfilePhoto(event.target.files?.[0])}
+                        />
+                      </label>
+                      {profilePhotoFile && <button className="text-button" type="button" disabled={isSaving} onClick={() => setProfilePhotoFile(null)}>ביטול החלפת התמונה</button>}
+                    </div>
+                  </section>
+                )}
               </div>
               {error && <p className="dialog-error" role="alert">{error}</p>}
             </div>
             <footer className="dialog-footer">
-              <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? 'שומר…' : 'שמירת תורם'}</button>
+              <button className="primary-button" disabled={isSaving} type="submit">{isSaving ? 'שומר…' : editingDonor ? 'שמירת שינויים' : 'שמירת תורם'}</button>
               <button className="secondary-button" disabled={isSaving} type="button" onClick={closeForm}>ביטול</button>
             </footer>
           </form>

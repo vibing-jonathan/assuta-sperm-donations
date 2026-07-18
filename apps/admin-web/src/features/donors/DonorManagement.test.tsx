@@ -13,6 +13,7 @@ function createRepository(donors: Donor[] = []): DonorRepository {
       return () => undefined
     },
     add: vi.fn(),
+    update: vi.fn(),
     remove: vi.fn(),
     removeAll: vi.fn().mockResolvedValue({ deletedDonorCount: donors.length, deletedClaimCount: donors.length }),
   }
@@ -184,6 +185,67 @@ describe('DonorManagement', () => {
 
     fireEvent.click(screen.getByRole('heading', { name: 'ניהול תורמים' }))
     expect(rowActions.closest('details')).not.toHaveAttribute('open')
+  })
+
+  it('edits all donor fields from the row action menu', async () => {
+    const donor = {
+      id: 'donor-edit', donorNumber: '1314', geneticCarrierStatus: 'חיובי', occupation: 'שף',
+      origin: 'בריטניה', religion: 'יהודי', skinColor: 'בהיר', eyeColor: 'חום',
+      hairColor: 'חום', heightMeters: 1.8, weightKg: 72, cmvIgg: 'שלילי',
+    } as Donor
+    const repository = createRepository([donor])
+    render(<DonorManagement adminEmail="admin@example.com" repository={repository} />)
+
+    const actions = await screen.findByLabelText('פעולות עבור תורם 1314')
+    fireEvent.click(actions)
+    fireEvent.click(within(actions.closest('.desktop-donor-table') as HTMLElement)
+      .getByRole('button', { name: 'עריכת תורם' }))
+    const dialog = screen.getByRole('dialog', { name: 'עריכת תורם 1314' })
+    expect(within(dialog).getByLabelText(/מס׳ תורם/)).toHaveValue('1314')
+    expect(within(dialog).getByLabelText(/מס׳ תורם/)).toHaveAttribute('readonly')
+    expect(within(dialog).getByLabelText('עיסוק')).toHaveValue('שף')
+
+    fireEvent.change(within(dialog).getByLabelText('עיסוק'), { target: { value: 'חוקר' } })
+    fireEvent.click(within(within(dialog).getByRole('group', { name: 'נשאויות גנטיות' }))
+      .getByRole('radio', { name: 'שלילי' }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'שמירת שינויים' }))
+
+    await waitFor(() => expect(repository.update).toHaveBeenCalledWith(
+      'donor-edit',
+      '1314',
+      expect.objectContaining({ occupation: 'חוקר', geneticCarrierStatus: 'שלילי' }),
+      'admin@example.com',
+    ))
+  })
+
+  it('replaces a profile photo manually without requesting AI generation', async () => {
+    const donor = {
+      id: 'donor-photo', donorNumber: '1400', geneticCarrierStatus: 'חיובי', occupation: '',
+      origin: '', religion: '', skinColor: 'בהיר', eyeColor: 'כחול', hairColor: 'חום',
+      heightMeters: 1.8, weightKg: 80, cmvIgg: 'חיובי',
+    } as Donor
+    const repository = createRepository([donor])
+    const profileImageRepository = { getImageUrl: vi.fn(), uploadImage: vi.fn().mockResolvedValue(undefined) }
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:selection') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    render(<DonorManagement
+      adminEmail="admin@example.com"
+      repository={repository}
+      profileImageRepository={profileImageRepository}
+    />)
+
+    const actions = await screen.findByLabelText('פעולות עבור תורם 1400')
+    fireEvent.click(actions)
+    fireEvent.click(within(actions.closest('.desktop-donor-table') as HTMLElement)
+      .getByRole('button', { name: 'עריכת תורם' }))
+    const dialog = screen.getByRole('dialog', { name: 'עריכת תורם 1400' })
+    const jpeg = new File(['jpeg'], 'replacement.jpg', { type: 'image/jpeg' })
+    fireEvent.change(within(dialog).getByLabelText('בחירת תמונת JPEG'), { target: { files: [jpeg] } })
+    expect(await within(dialog).findByAltText('תצוגה מקדימה של התמונה החדשה')).toHaveAttribute('src', 'blob:selection')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'שמירת שינויים' }))
+
+    await waitFor(() => expect(profileImageRepository.uploadImage).toHaveBeenCalledWith('donor-photo', jpeg))
+    expect(repository.update).toHaveBeenCalledOnce()
   })
 
   it('shows a retryable message when the donor PDF has not been uploaded', async () => {
