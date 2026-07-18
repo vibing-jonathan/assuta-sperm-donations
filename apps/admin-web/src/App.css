@@ -726,8 +726,10 @@ tbody tr:last-child td {
 .desktop-donor-table tbody .actions-cell {
   position: sticky;
   left: 0;
-  min-width: 4.25rem;
-  box-shadow: 8px 0 14px -12px rgb(11 28 48 / 55%);
+  width: 3.5rem;
+  min-width: 3.5rem;
+  padding-inline: 0.35rem;
+  box-shadow: 4px 0 10px -8px rgb(11 28 48 / 40%);
 }
 
 .desktop-donor-table thead th:last-child {
@@ -739,6 +741,10 @@ tbody tr:last-child td {
 .desktop-donor-table tbody .actions-cell {
   z-index: 2;
   background: var(--surface);
+}
+
+.desktop-donor-table tbody .actions-cell:has(.row-actions[open]) {
+  z-index: 10;
 }
 
 .desktop-donor-table tbody tr:nth-child(even) .actions-cell {
@@ -785,7 +791,7 @@ tbody tr:last-child td {
 
 .action-menu {
   position: absolute;
-  z-index: 5;
+  z-index: 11;
   top: calc(100% + 0.25rem);
   left: 0;
   display: grid;
