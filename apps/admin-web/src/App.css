@@ -151,8 +151,7 @@ input {
 }
 
 .donor-workspace {
-  width: min(100%, 90rem);
-  margin: 0 auto;
+  width: 100%;
 }
 
 .workspace-header {
@@ -721,6 +720,41 @@ tbody tr:last-child td {
 .actions-cell {
   position: relative;
   text-align: center;
+}
+
+.desktop-donor-table thead th:last-child,
+.desktop-donor-table tbody .actions-cell {
+  position: sticky;
+  left: 0;
+  min-width: 4.25rem;
+  box-shadow: 8px 0 14px -12px rgb(11 28 48 / 55%);
+}
+
+.desktop-donor-table thead th:last-child {
+  z-index: 4;
+  background: #edf2fb;
+  text-align: center;
+}
+
+.desktop-donor-table tbody .actions-cell {
+  z-index: 2;
+  background: var(--surface);
+}
+
+.desktop-donor-table tbody tr:nth-child(even) .actions-cell {
+  background: #fbfcfe;
+}
+
+.desktop-donor-table tbody tr:hover .actions-cell {
+  background: #f2f6fd;
+}
+
+.desktop-donor-table tbody tr.negative-carrier-highlight .actions-cell {
+  background: #f2faf7;
+}
+
+.desktop-donor-table tbody tr.negative-carrier-highlight:hover .actions-cell {
+  background: #eaf7f2;
 }
 
 .row-actions {
