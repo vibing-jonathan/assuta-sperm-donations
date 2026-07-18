@@ -100,6 +100,19 @@ export function DonorManagement({
     return () => document.removeEventListener('keydown', closeOnEscape)
   }, [donorPendingDelete, donorPendingView, isFormOpen])
 
+  useEffect(() => {
+    function closeRowActionsOnOutsideClick(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      document.querySelectorAll<HTMLDetailsElement>('.row-actions[open]').forEach((details) => {
+        if (!details.contains(target)) details.removeAttribute('open')
+      })
+    }
+
+    document.addEventListener('click', closeRowActionsOnOutsideClick)
+    return () => document.removeEventListener('click', closeRowActionsOnOutsideClick)
+  }, [])
+
   function updateTextField(key: keyof DonorInput, value: string) {
     setForm((current) => ({ ...current, [key]: value }))
   }

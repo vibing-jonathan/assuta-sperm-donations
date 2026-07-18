@@ -153,6 +153,22 @@ describe('DonorManagement', () => {
     expect(pageLink).toHaveAttribute('target', '_blank')
   })
 
+  it('closes an open row action menu when clicking elsewhere', async () => {
+    const donor = {
+      id: 'donor-actions', donorNumber: '1314', geneticCarrierStatus: 'חיובי', occupation: 'שף',
+      origin: 'בריטניה', religion: 'יהודי', skinColor: 'בהיר-משתזף', eyeColor: 'חום',
+      hairColor: 'חום', heightMeters: 1.8, weightKg: 72, cmvIgg: 'שלילי',
+    } as Donor
+    render(<DonorManagement adminEmail="admin@example.com" repository={createRepository([donor])} />)
+
+    const rowActions = await screen.findByLabelText('פעולות עבור תורם 1314')
+    fireEvent.click(rowActions)
+    expect(rowActions.closest('details')).toHaveAttribute('open')
+
+    fireEvent.click(screen.getByRole('heading', { name: 'ניהול תורמים' }))
+    expect(rowActions.closest('details')).not.toHaveAttribute('open')
+  })
+
   it('shows a retryable message when donor pages have not been uploaded', async () => {
     const donor = {
       id: 'donor-no-pages', donorNumber: '5006', geneticCarrierStatus: 'חיובי', occupation: '',
