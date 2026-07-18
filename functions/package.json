@@ -10,7 +10,9 @@
   "scripts": {
     "build": "rimraf lib && tsc",
     "test": "vitest run src",
-    "check": "npm run build && npm run test"
+    "check": "npm run build && npm run test",
+    "test:profile-images": "npm run build && node --env-file=../.env scripts/generateProfileImageComparison.mjs",
+    "test:profile-images:openai": "npm run build && node --env-file=../.env scripts/generateProfileImageComparison.mjs --provider=openai"
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
