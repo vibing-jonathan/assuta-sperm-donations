@@ -1,0 +1,196 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email in [
+          'jgabbayj@gmail.com',
+          'robieis153@gmail.com'
+        ];
+    }
+
+    function hasValidDonorSchema() {
+      return request.resource.data.keys().hasOnly([
+          'donorNumber', 'geneticCarrierStatus', 'occupation', 'origin', 'religion', 'skinColor',
+          'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'importId'
+        ])
+        && request.resource.data.keys().hasAll([
+          'donorNumber', 'geneticCarrierStatus', 'occupation', 'origin', 'religion', 'skinColor',
+          'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.donorNumber is string
+        && request.resource.data.donorNumber.size() > 0
+        && !request.resource.data.donorNumber.matches('.*\\*\\*\\*$')
+        && request.resource.data.geneticCarrierStatus in ['חיובי', 'שלילי']
+        && request.resource.data.occupation is string
+        && request.resource.data.origin is string
+        && request.resource.data.religion is string
+        && request.resource.data.skinColor is string
+        && request.resource.data.eyeColor is string
+        && request.resource.data.hairColor is string
+        && request.resource.data.cmvIgg is string
+        && (!request.resource.data.keys().hasAny(['importId'])
+          || request.resource.data.importId is string)
+        && (request.resource.data.heightMeters == null
+          || (request.resource.data.heightMeters is number
+            && request.resource.data.heightMeters >= 1
+            && request.resource.data.heightMeters <= 2.5))
+        && (request.resource.data.weightKg == null
+          || (request.resource.data.weightKg is number
+            && request.resource.data.weightKg >= 30
+            && request.resource.data.weightKg <= 300));
+    }
+
+    match /donors/{donorId} {
+      allow read, delete: if isAdmin();
+      allow create: if isAdmin()
+        && hasValidDonorSchema()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email
+        && request.resource.data.updatedBy == request.auth.token.email;
+      allow update: if isAdmin()
+        && hasValidDonorSchema()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.token.email;
+    }
+
+    match /donorNumberClaims/{claimId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'donorId', 'donorNumber', 'normalizedDonorNumber', 'createdAt', 'createdBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'donorId', 'donorNumber', 'normalizedDonorNumber', 'createdAt', 'createdBy'
+        ])
+        && request.resource.data.donorId is string
+        && request.resource.data.donorId.size() > 0
+        && request.resource.data.donorNumber is string
+        && request.resource.data.donorNumber.size() > 0
+        && request.resource.data.normalizedDonorNumber is string
+        && request.resource.data.normalizedDonorNumber.size() > 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow delete: if isAdmin();
+      allow update: if false;
+    }
+
+    match /donorImports/{importId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'sourceFileName', 'detectedStartPage', 'detectedEndPage', 'detectedPageCount',
+          'geminiModel', 'extractionMethod', 'parserVersion', 'extractionDurationMs',
+          'fallbackReason', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
+          'replacedCount', 'skippedCount', 'warnings', 'duplicateDonorNumbers',
+          'replacedDonorNumbers', 'status', 'outcome'
+        ])
+        && request.resource.data.keys().hasAll([
+          'sourceFileName', 'detectedStartPage', 'detectedEndPage', 'detectedPageCount',
+          'geminiModel', 'extractionMethod', 'parserVersion', 'extractionDurationMs',
+          'fallbackReason', 'importedBy', 'importedAt', 'approvedCount', 'importedCount',
+          'skippedCount', 'warnings', 'duplicateDonorNumbers', 'status', 'outcome'
+        ])
+        && request.resource.data.sourceFileName is string
+        && request.resource.data.sourceFileName.size() > 0
+        && request.resource.data.sourceFileName.size() <= 200
+        && request.resource.data.detectedStartPage is int
+        && request.resource.data.detectedStartPage >= 1
+        && request.resource.data.detectedEndPage is int
+        && request.resource.data.detectedEndPage >= request.resource.data.detectedStartPage
+        && request.resource.data.detectedPageCount is int
+        && request.resource.data.detectedPageCount == request.resource.data.detectedEndPage - request.resource.data.detectedStartPage + 1
+        && (request.resource.data.geminiModel == null
+          || request.resource.data.geminiModel is string)
+        && request.resource.data.extractionMethod in ['deterministic', 'gemini-fallback', 'gemini-forced']
+        && request.resource.data.parserVersion is string
+        && request.resource.data.parserVersion.size() > 0
+        && request.resource.data.parserVersion.size() <= 100
+        && request.resource.data.extractionDurationMs is int
+        && request.resource.data.extractionDurationMs >= 0
+        && request.resource.data.fallbackReason in [
+          null, 'text_layer_unavailable', 'headers_missing', 'columns_ambiguous',
+          'rows_ambiguous', 'unsupported_layout'
+        ]
+        && (
+          (request.resource.data.extractionMethod == 'deterministic'
+            && request.resource.data.geminiModel == null
+            && request.resource.data.fallbackReason == null)
+          || (request.resource.data.extractionMethod == 'gemini-fallback'
+            && request.resource.data.geminiModel is string
+            && request.resource.data.geminiModel.size() > 0
+            && request.resource.data.fallbackReason != null)
+          || (request.resource.data.extractionMethod == 'gemini-forced'
+            && request.resource.data.geminiModel is string
+            && request.resource.data.geminiModel.size() > 0
+            && request.resource.data.fallbackReason == null)
+        )
+        && request.resource.data.importedBy == request.auth.token.email
+        && request.resource.data.importedAt == request.time
+        && request.resource.data.approvedCount is int
+        && request.resource.data.approvedCount >= 0
+        && request.resource.data.approvedCount <= 249
+        && request.resource.data.importedCount is int
+        && request.resource.data.importedCount >= 0
+        && request.resource.data.importedCount <= request.resource.data.approvedCount
+        && request.resource.data.skippedCount is int
+        && request.resource.data.skippedCount >= 0
+        && request.resource.data.warnings is list
+        && request.resource.data.warnings.size() <= 100
+        && request.resource.data.duplicateDonorNumbers is list
+        && request.resource.data.duplicateDonorNumbers.size() == request.resource.data.skippedCount
+        && (
+          !request.resource.data.keys().hasAny(['replacedCount', 'replacedDonorNumbers'])
+          || (request.resource.data.keys().hasAll(['replacedCount', 'replacedDonorNumbers'])
+            && request.resource.data.replacedCount is int
+            && request.resource.data.replacedCount >= 0
+            && request.resource.data.importedCount + request.resource.data.replacedCount <= request.resource.data.approvedCount
+            && request.resource.data.replacedDonorNumbers is list
+            && request.resource.data.replacedDonorNumbers.size() == request.resource.data.replacedCount)
+        )
+        && (
+          (request.resource.data.status == 'completed'
+            && request.resource.data.outcome in [
+              'imported', 'imported_with_skips', 'duplicates_skipped', 'replaced',
+              'imported_with_replacements', 'imported_with_replacements_and_skips'
+            ])
+          || (request.resource.data.status == 'failed'
+            && request.resource.data.outcome == 'import_failed'
+            && request.resource.data.importedCount == 0
+            && (!request.resource.data.keys().hasAny(['replacedCount'])
+              || request.resource.data.replacedCount == 0))
+        );
+      allow update, delete: if false;
+    }
+
+    match /appSettings/userAccess {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'username', 'password', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.keys().hasAll([
+          'username', 'password', 'updatedAt', 'updatedBy'
+        ])
+        && request.resource.data.username is string
+        && request.resource.data.username.size() > 0
+        && request.resource.data.username.size() <= 100
+        && request.resource.data.password is string
+        && request.resource.data.password.size() > 0
+        && request.resource.data.password.size() <= 200
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.updatedBy == request.auth.token.email;
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
