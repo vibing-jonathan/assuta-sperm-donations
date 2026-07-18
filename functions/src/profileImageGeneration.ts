@@ -33,18 +33,24 @@ export const ARCHIE_1436_APPEARANCE: DonorAppearance = {
 }
 
 export function buildDonorProfilePrompt(appearance: DonorAppearance) {
+  const context = [appearance.build, appearance.skin, appearance.hair, appearance.eyes, ...appearance.facialDetails]
+    .filter(Boolean).join('; ')
+  const parentContext = [
+    appearance.maternalAppearance ? `maternal side - ${appearance.maternalAppearance}` : '',
+    appearance.paternalAppearance ? `paternal side - ${appearance.paternalAppearance}` : '',
+  ].filter(Boolean).join('; ')
   return [
     'Use case: photorealistic-natural',
     'Asset type: square donor profile avatar',
     'Primary request: Create a realistic but clearly synthetic head-and-shoulders portrait of a young adult man. He must not depict or copy an identifiable real person.',
-    `Subject: ${appearance.build}; ${appearance.skin}; ${appearance.hair}; ${appearance.eyes}; ${appearance.facialDetails.join('; ')}.`,
-    `Family appearance context, for subtle inherited-feature plausibility only: maternal side - ${appearance.maternalAppearance}; paternal side - ${appearance.paternalAppearance}. Do not show either parent.`,
+    `Subject: ${context}.`,
+    parentContext ? `Family appearance context, for subtle inherited-feature plausibility only: ${parentContext}. Do not show either parent.` : '',
     'Style/medium: natural professional portrait photography with realistic skin and hair texture',
     'Composition/framing: centered eye-level head-and-shoulders crop, face fully visible, broad shoulders subtly visible, square composition',
     'Lighting/mood: soft neutral studio lighting, calm and approachable expression',
     'Scene/backdrop: simple warm light-gray background with no objects',
     'Constraints: one adult person only; everyday modest clothing; no medical context; no donor identifiers; no text; no logo; no watermark; no celebrity resemblance; no exaggerated beauty retouching.',
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 async function readProviderError(response: Response, provider: string): Promise<never> {

@@ -620,7 +620,10 @@ export function PdfImport({
           <h2 id="import-success-title">הייבוא הושלם בהצלחה</h2>
           <p><strong>{importResult.importedCount}</strong> תורמים חדשים יובאו, <strong>{importResult.replacedCount}</strong> תורמים קיימים הוחלפו, <strong>{importResult.skippedCount}</strong> כפילויות בקובץ דולגו.</p>
           {pageUploadResult && (
-            <p className="page-upload-success"><strong>{pageUploadResult.uploadedPdfCount}</strong> קובצי PDF נשמרו עבור <strong>{pageUploadResult.uploadedDonorCount}</strong> תורמים.</p>
+            <>
+              <p className="page-upload-success"><strong>{pageUploadResult.uploadedPdfCount}</strong> קובצי PDF נשמרו עבור <strong>{pageUploadResult.uploadedDonorCount}</strong> תורמים.</p>
+              <p className="page-upload-success">תמונות הפרופיל הנדרשות נוצרות כעת ברקע ויופיעו אוטומטית במאגר.</p>
+            </>
           )}
           {pageUploadError && (
             <div className="page-upload-failure">

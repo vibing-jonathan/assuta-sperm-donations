@@ -3,8 +3,9 @@ import { getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { logger } from 'firebase-functions'
 import { defineSecret } from 'firebase-functions/params'
-import { onDocumentDeleted } from 'firebase-functions/v2/firestore'
+import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
+import { onTaskDispatched } from 'firebase-functions/v2/tasks'
 
 import { getAllowedAdminEmail } from './admin.js'
 import { deleteAllDonorRecords } from './deleteDonors.js'
@@ -16,6 +17,16 @@ import {
   readDonorPdfGenerationRequest,
 } from './generateDonorPdfs.js'
 import { geminiGenerationConfig } from './geminiConfig.js'
+import {
+  deleteDonorProfileArtifacts,
+  enqueueProfileImageTask,
+  processProfileImageJob,
+  registerDonorProfileInput,
+  registerDonorProfileInputByNumber,
+  summaryProfileInput,
+  type ProfileImageTaskPayload,
+} from './donorProfileImages.js'
+import { donorStorageKey } from './donorPages.js'
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY')
 const MAX_RELEVANT_PDF_BYTES = 8 * 1024 * 1024
@@ -170,17 +181,82 @@ export const cleanupDonorPagesOnDelete = onDocumentDeleted({
   retry: true,
 }, async (event) => {
   const donorNumber = event.data?.get('donorNumber')
+  let deletedObjectCount = 0
   if (typeof donorNumber !== 'string' || !donorNumber.trim()) {
     logger.warn('Deleted donor did not contain a usable donor number.', {
       donorId: event.params.donorId,
     })
-    return
+  } else {
+    deletedObjectCount = await deleteDonorPageImages(donorNumber)
   }
-
-  const deletedObjectCount = await deleteDonorPageImages(donorNumber)
-  logger.info('Deleted donor page images.', {
+  const profileCleanup = await deleteDonorProfileArtifacts(event.params.donorId)
+  logger.info('Deleted donor storage artifacts.', {
     donorId: event.params.donorId,
     deletedObjectCount,
+    ...profileCleanup,
+  })
+})
+
+export const createManualDonorProfileJob = onDocumentCreated({
+  document: 'donors/{donorId}',
+  region: 'europe-west1',
+  retry: true,
+}, async (event) => {
+  if (!event.data || event.data.get('importId')) return
+  const input = summaryProfileInput(event.data.data())
+  if (!input) return
+  const result = await registerDonorProfileInput(event.params.donorId, input)
+  logger.info('Manual donor profile image input registered.', {
+    donorId: event.params.donorId,
+    jobCreated: result.created,
+  })
+})
+
+export const enqueueDonorProfileImage = onDocumentCreated({
+  document: 'donorProfileJobs/{jobId}',
+  region: 'europe-west1',
+  retry: true,
+}, async (event) => {
+  const donorId = event.data?.get('donorId')
+  const inputHash = event.data?.get('inputHash')
+  if (typeof donorId !== 'string' || typeof inputHash !== 'string'
+    || inputHash.length !== 64 || event.params.jobId.length !== 64) {
+    logger.warn('Rejected invalid donor profile image job.', { jobId: event.params.jobId })
+    return
+  }
+  const enqueued = await enqueueProfileImageTask({ jobId: event.params.jobId, donorId, inputHash })
+  logger.info('Donor profile image task handled.', { jobId: event.params.jobId, donorId, enqueued })
+})
+
+export const generateDonorProfileImage = onTaskDispatched<ProfileImageTaskPayload>({
+  region: 'europe-west1',
+  secrets: [geminiApiKey],
+  timeoutSeconds: 300,
+  memory: '512MiB',
+  maxInstances: 2,
+  concurrency: 1,
+  retryConfig: {
+    maxAttempts: 4,
+    minBackoffSeconds: 60,
+    maxBackoffSeconds: 900,
+    maxDoublings: 3,
+  },
+  rateLimits: {
+    maxConcurrentDispatches: 2,
+    maxDispatchesPerSecond: 1,
+  },
+}, async (request) => {
+  const payload = request.data
+  if (!payload || typeof payload.jobId !== 'string' || typeof payload.donorId !== 'string'
+    || typeof payload.inputHash !== 'string') {
+    logger.warn('Rejected invalid donor profile task payload.')
+    return
+  }
+  const result = await processProfileImageJob(payload, geminiApiKey.value())
+  logger.info('Donor profile image task completed.', {
+    jobId: payload.jobId,
+    donorId: payload.donorId,
+    outcome: result.outcome,
   })
 })
 
@@ -230,11 +306,17 @@ export const generateDonorDetailPdfs = onRequest({
 
   try {
     const result = await generateAndStoreDonorPdfs(input)
+    const profileInputs = input.sources.filter((source) => source.profileImageInput)
+    const profileJobs = await Promise.all(profileInputs.map((source) => registerDonorProfileInputByNumber(
+      donorStorageKey(source.donorNumber),
+      source.profileImageInput,
+    )))
     logger.info('Donor detail PDFs generated.', {
       adminEmail,
       donorCount: result.uploadedDonorCount,
       sourcePdfBytes: result.sourcePdfBytes,
       generatedPdfBytes: result.generatedPdfBytes,
+      profileJobCount: profileJobs.filter((job) => job.created).length,
     })
     response.status(200).json(result)
   } catch (error) {

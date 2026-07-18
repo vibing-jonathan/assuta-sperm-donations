@@ -24,7 +24,7 @@ export interface DonorRepository {
 }
 
 function toDonor(snapshot: QueryDocumentSnapshot<DocumentData>): Donor {
-  const data = snapshot.data() as DonorInput
+  const data = snapshot.data() as Omit<Donor, 'id'>
   return { id: snapshot.id, ...data }
 }
 

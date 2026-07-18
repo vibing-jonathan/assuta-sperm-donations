@@ -126,7 +126,7 @@ describe('DonorManagement', () => {
     const donorRow = within(desktopTable as HTMLElement).getByRole('row', { name: /D-4922/ })
     expect(donorRow).toHaveClass('negative-carrier-highlight')
     expect(mobileList?.querySelector('.mobile-donor-card')).toHaveClass('negative-carrier-highlight')
-    const carrierStatus = within(within(donorRow).getAllByRole('cell')[0]!).getByText('שלילי')
+    const carrierStatus = within(within(donorRow).getAllByRole('cell')[1]!).getByText('שלילי')
     expect(carrierStatus).toHaveClass('genetic-carrier-safe')
     fireEvent.click(within(desktopTable as HTMLElement).getByRole('button', { name: 'מחיקת תורם' }))
 

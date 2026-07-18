@@ -8,6 +8,8 @@ import {
 } from './donorFieldRules'
 import { displayedDonorMetadata } from './donorNumberMetadata'
 import { DonorPageViewer } from './DonorPageViewer'
+import { DonorProfileAvatar } from './DonorProfileAvatar'
+import type { DonorProfileImageRepository } from './donorProfileImageRepository'
 import type { DonorPageRepository } from './donorPageImages'
 import { DuplicateDonorNumberError, firestoreDonorRepository, type DonorRepository } from './donorRepository'
 
@@ -15,6 +17,7 @@ interface DonorManagementProps {
   adminEmail: string
   repository?: DonorRepository
   pageRepository?: DonorPageRepository
+  profileImageRepository?: DonorProfileImageRepository
 }
 
 type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
@@ -38,6 +41,7 @@ export function DonorManagement({
   adminEmail,
   repository = firestoreDonorRepository,
   pageRepository,
+  profileImageRepository,
 }: DonorManagementProps) {
   const [donors, setDonors] = useState<Donor[]>([])
   const [form, setForm] = useState<DonorInput>(emptyDonorInput)
@@ -263,13 +267,14 @@ export function DonorManagement({
             <table>
               <thead>
                 <tr>
-                  <th>מס׳ תורם</th><th>נשאויות גנטיות</th><th>עיסוק</th><th>מוצא</th><th>דת</th><th>צבע עור</th>
+                  <th><span className="sr-only">תמונה</span></th><th>מס׳ תורם</th><th>נשאויות גנטיות</th><th>עיסוק</th><th>מוצא</th><th>דת</th><th>צבע עור</th>
                   <th>עיניים</th><th>שיער</th><th>גובה (מ׳)</th><th>משקל (ק״ג)</th><th>CMV IgG</th><th>פעולות</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleDonors.map((donor) => (
                   <tr className={displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'negative-carrier-highlight' : undefined} key={donor.id}>
+                    <td className="profile-cell"><DonorProfileAvatar donor={donor} repository={profileImageRepository} /></td>
                     <th scope="row">{displayedDonorMetadata(donor).donorNumber}</th>
                     <td><span className={`cmv-chip ${displayedDonorMetadata(donor).geneticCarrierStatus === 'שלילי' ? 'genetic-carrier-safe' : 'genetic-carrier-alert'}`}>{displayedDonorMetadata(donor).geneticCarrierStatus}</span></td>
                     <td>{donor.occupation || '—'}</td><td>{donor.origin || '—'}</td><td>{donor.religion || '—'}</td>
@@ -308,6 +313,7 @@ export function DonorManagement({
                 <details>
                   <summary>
                     <div className="mobile-donor-card-heading">
+                      <DonorProfileAvatar donor={donor} repository={profileImageRepository} />
                       <div>
                         <strong dir="ltr">{displayedDonorMetadata(donor).donorNumber}</strong>
                         <span>{donor.occupation || 'עיסוק לא צוין'}</span>

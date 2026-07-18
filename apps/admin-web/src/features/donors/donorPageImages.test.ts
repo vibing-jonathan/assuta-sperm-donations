@@ -27,7 +27,16 @@ describe('donor detail PDF', () => {
   })
 
   it('prefixes the single catalog upload with bounded generation metadata', () => {
-    const sources = [{ sourceIndex: 2, sourceDonorNumber: '1314***', donorNumber: '1314' }]
+    const sources = [{
+      sourceIndex: 2,
+      sourceDonorNumber: '1314***',
+      donorNumber: '1314',
+      profileImageInput: {
+        sourceVersion: 'catalog-detail-v1' as const,
+        build: 'חסון', skin: 'בהיר', hair: 'חום', eyes: 'כחול', facialDetails: [],
+        maternalAppearance: '', paternalAppearance: '',
+      },
+    }]
     const header = createDonorPdfGenerationHeader(8, sources)
     const metadataLength = new DataView(header.buffer).getUint32(0)
     const metadata = JSON.parse(new TextDecoder().decode(header.subarray(4)))

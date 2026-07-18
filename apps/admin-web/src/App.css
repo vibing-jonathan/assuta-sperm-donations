@@ -581,6 +581,45 @@ tbody tr:last-child td {
   font-variant-numeric: tabular-nums;
 }
 
+.profile-cell {
+  width: 3.5rem;
+  padding-block: 0.35rem;
+}
+
+.donor-profile-avatar {
+  position: relative;
+  display: inline-grid;
+  overflow: hidden;
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: 0 0 auto;
+  border: 1px solid #d7e0ea;
+  border-radius: 50%;
+  background: #edf2f7;
+  color: #718096;
+  font-size: 1.25rem;
+  place-items: center;
+}
+
+.donor-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.donor-profile-avatar.is-processing i {
+  position: absolute;
+  inset: 2px;
+  border: 2px solid transparent;
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: profile-avatar-spin 900ms linear infinite;
+}
+
+@keyframes profile-avatar-spin {
+  to { transform: rotate(360deg); }
+}
+
 .cmv-chip {
   display: inline-flex;
   align-items: center;

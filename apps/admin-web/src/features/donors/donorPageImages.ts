@@ -2,6 +2,7 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 import { auth, firebaseApp } from '../../lib/firebase'
 import { donorNumberClaimId } from './donor'
+import { parseDonorProfileImageInput, type DonorProfileImageInput } from './donorProfileInput'
 
 export const DONOR_DETAIL_PAGE_COUNT = 3
 
@@ -9,6 +10,7 @@ export interface DonorPageSource {
   sourceIndex: number
   sourceDonorNumber: string
   donorNumber: string
+  profileImageInput?: DonorProfileImageInput
 }
 
 export interface DonorPageUploadProgress {
@@ -110,6 +112,7 @@ export const storeDonorDetailPdfs: StoreDonorDetailPdfs = async (
   const document = await loadingTask.promise
 
   try {
+    const verifiedSources: DonorPageSource[] = []
     for (let donorIndex = 0; donorIndex < sources.length; donorIndex += 1) {
       const source = sources[donorIndex]!
       const pageNumbers = detailPageNumbers(summaryEndPage, source.sourceIndex, document.numPages)
@@ -122,6 +125,8 @@ export const storeDonorDetailPdfs: StoreDonorDetailPdfs = async (
       if (pageTexts.some((text) => !pageMatchesDonor(text, source.sourceDonorNumber))) {
         throw new Error(`לא ניתן היה להתאים בבטחה את שלושת העמודים לתורם ${source.donorNumber}.`)
       }
+      const profileImageInput = parseDonorProfileImageInput(pageTexts[0] ?? '')
+      verifiedSources.push(profileImageInput ? { ...source, profileImageInput } : source)
 
       options.onProgress?.({
         completedDonors: donorIndex + 1,
@@ -147,7 +152,7 @@ export const storeDonorDetailPdfs: StoreDonorDetailPdfs = async (
           Authorization: `Bearer ${idToken}`,
           'Content-Type': 'application/octet-stream',
         },
-        body: new Blob([createDonorPdfGenerationHeader(summaryEndPage, sources), file], {
+        body: new Blob([createDonorPdfGenerationHeader(summaryEndPage, verifiedSources), file], {
           type: 'application/octet-stream',
         }),
       })

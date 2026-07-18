@@ -2,10 +2,11 @@ import { getStorage } from 'firebase-admin/storage'
 import { PDFDocument } from 'pdf-lib'
 
 import { donorStorageKey } from './donorPages.js'
+import { readDonorProfileImageInput, type DonorProfileImageInput } from './donorProfileImages.js'
 
 const DONOR_DETAIL_PAGE_COUNT = 3
 const MAX_DONORS_PER_REQUEST = 249
-const MAX_METADATA_BYTES = 128 * 1024
+const MAX_METADATA_BYTES = 512 * 1024
 const MAX_SOURCE_PDF_BYTES = 20 * 1024 * 1024
 const MAX_GENERATED_PDF_BYTES = 10 * 1024 * 1024
 const UPLOAD_CONCURRENCY = 8
@@ -14,6 +15,7 @@ export interface DonorPdfSource {
   sourceIndex: number
   sourceDonorNumber: string
   donorNumber: string
+  profileImageInput?: DonorProfileImageInput
 }
 
 export interface DonorPdfGenerationRequest {
@@ -62,10 +64,19 @@ function readMetadata(value: unknown) {
       throw new InvalidDonorPdfRequestError('Duplicate donor target.')
     }
     storageKeys.add(storageKey)
+    let profileImageInput: DonorProfileImageInput | undefined
+    if (source.profileImageInput !== undefined) {
+      try {
+        profileImageInput = readDonorProfileImageInput(source.profileImageInput)
+      } catch {
+        throw new InvalidDonorPdfRequestError('Invalid donor profile input.')
+      }
+    }
     return {
       sourceIndex: source.sourceIndex as number,
       sourceDonorNumber,
       donorNumber,
+      ...(profileImageInput ? { profileImageInput } : {}),
     }
   })
 
