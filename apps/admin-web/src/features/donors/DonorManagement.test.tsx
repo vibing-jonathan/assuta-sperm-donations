@@ -139,8 +139,11 @@ describe('DonorManagement', () => {
       />,
     )
 
-    fireEvent.click(await screen.findByLabelText('פעולות עבור תורם 1314'))
+    const rowActions = await screen.findByLabelText('פעולות עבור תורם 1314')
+    fireEvent.click(rowActions)
+    expect(rowActions.closest('details')).toHaveAttribute('open')
     fireEvent.click(screen.getByRole('button', { name: 'צפייה בעמודי מידע' }))
+    expect(rowActions.closest('details')).not.toHaveAttribute('open')
 
     expect(await screen.findByRole('dialog', { name: /עמודי מידע — תורם 1314/ })).toBeInTheDocument()
     expect(pageRepository.getPageUrls).toHaveBeenCalledWith('1314')

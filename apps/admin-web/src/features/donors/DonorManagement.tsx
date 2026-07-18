@@ -241,8 +241,14 @@ export function DonorManagement({
                       <details className="row-actions">
                         <summary aria-label={`פעולות עבור תורם ${displayedDonorMetadata(donor).donorNumber}`}>•••</summary>
                         <div className="action-menu">
-                          <button type="button" onClick={() => setDonorPendingView(donor)}>צפייה בעמודי מידע</button>
-                          <button type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
+                          <button type="button" onClick={(event) => {
+                            event.currentTarget.closest('details')?.removeAttribute('open')
+                            setDonorPendingView(donor)
+                          }}>צפייה בעמודי מידע</button>
+                          <button type="button" onClick={(event) => {
+                            event.currentTarget.closest('details')?.removeAttribute('open')
+                            setDonorPendingDelete(donor)
+                          }}>מחיקת תורם</button>
                         </div>
                       </details>
                     </td>
