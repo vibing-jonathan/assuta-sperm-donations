@@ -87,6 +87,17 @@ after every comma.
 The UI limits each approval to 249 new or replacement donors so donor documents, uniqueness claims, and the audit
 record remain below Firestore's 500-write transaction limit.
 
+### Donor detail pages
+
+After the donor records are approved, the browser verifies and renders the three consecutive detail
+pages for every selected donor as JPEG images. The expected donor number must appear in all three PDF
+text layers before upload, preventing a shifted catalog page from being attached to the wrong donor.
+Images are stored at `donor-pages/{normalizedDonorKey}/page-1.jpg` through `page-3.jpg` in Firebase
+Storage. Only approved administrators can upload, replace, delete, or view them. The donor dashboard
+loads the three images on demand and provides a full-size link for each page. If image upload fails
+after the atomic Firestore import, the success screen keeps a separate retry action without repeating
+the donor import.
+
 ### Shared user-app access
 
 The admin Settings page manages the shared user-app username and password stored in the admin-only

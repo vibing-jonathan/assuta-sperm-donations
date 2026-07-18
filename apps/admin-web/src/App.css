@@ -634,13 +634,21 @@ tbody tr:last-child td {
   border: 0;
   border-radius: 0.35rem;
   background: transparent;
-  color: var(--red);
+  color: var(--navy-800);
   cursor: pointer;
   font: inherit;
   text-align: right;
 }
 
 .action-menu button:hover {
+  background: var(--surface-soft);
+}
+
+.action-menu button:last-child {
+  color: var(--red);
+}
+
+.action-menu button:last-child:hover {
   background: var(--red-soft);
 }
 
@@ -1292,6 +1300,102 @@ tbody tr:last-child td {
   border-radius: 0.8rem;
   background: var(--surface);
   box-shadow: 0 18px 48px rgb(0 26 66 / 22%);
+}
+
+.donor-pages-backdrop {
+  place-items: start center;
+}
+
+.donor-pages-dialog {
+  width: min(100%, 76rem);
+  max-height: calc(100vh - 4rem);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  box-shadow: 0 18px 48px rgb(0 26 66 / 22%);
+}
+
+.donor-pages-dialog .dialog-header p {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.donor-pages-body {
+  max-height: calc(100vh - 10rem);
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.donor-pages-loading {
+  display: flex;
+  min-height: 16rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  color: var(--navy-800);
+}
+
+.donor-pages-error {
+  display: grid;
+  min-height: 14rem;
+  align-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+}
+
+.donor-page-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.donor-page-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--surface-soft);
+}
+
+.donor-page-card > a {
+  display: block;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  background: #e8ecf3;
+}
+
+.donor-page-card img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.donor-page-card div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.donor-page-card div a {
+  color: var(--navy-800);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.page-upload-success {
+  padding: 0.75rem 1rem;
+  border: 1px solid #aad8cf;
+  border-radius: 0.5rem;
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.page-upload-failure {
+  margin: 1rem 0;
 }
 
 .dialog-header,
@@ -1961,6 +2065,47 @@ input:focus-visible {
     cursor: pointer;
     font: inherit;
     font-weight: 700;
+  }
+
+  .mobile-pages-button {
+    width: 100%;
+    min-height: 2.7rem;
+    margin-bottom: 0.65rem;
+    border: 1px solid var(--navy-800);
+    border-radius: 0.5rem;
+    background: #fff;
+    color: var(--navy-800);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+  }
+
+  .donor-pages-backdrop {
+    padding: 0;
+  }
+
+  .donor-pages-dialog {
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .donor-pages-body {
+    max-height: calc(100dvh - 4rem);
+    padding: 0.85rem;
+  }
+
+  .donor-page-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .donor-page-card > a {
+    aspect-ratio: auto;
+  }
+
+  .donor-page-card img {
+    height: auto;
   }
 
   .cmv-unknown {

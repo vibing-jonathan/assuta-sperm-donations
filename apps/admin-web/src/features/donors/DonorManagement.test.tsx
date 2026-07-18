@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { DonorRepository } from './donorRepository'
 import { DonorManagement } from './DonorManagement'
 import type { Donor } from './donor'
+import type { DonorPageRepository } from './donorPageImages'
 
 function createRepository(donors: Donor[] = []): DonorRepository {
   return {
@@ -115,5 +116,62 @@ describe('DonorManagement', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /מחיקת תורם/ }))
 
     await waitFor(() => expect(repository.remove).toHaveBeenCalledWith('donor-1', 'D-4922***'))
+  })
+
+  it('loads and opens all three stored donor information pages', async () => {
+    const donor = {
+      id: 'donor-pages', donorNumber: '1314', geneticCarrierStatus: 'חיובי', occupation: 'שף',
+      origin: 'בריטניה', religion: 'יהודי', skinColor: 'בהיר-משתזף', eyeColor: 'חום',
+      hairColor: 'חום', heightMeters: 1.8, weightKg: 72, cmvIgg: 'שלילי',
+    } as Donor
+    const pageRepository: DonorPageRepository = {
+      getPageUrls: vi.fn().mockResolvedValue([
+        'https://storage.test/page-1.jpg',
+        'https://storage.test/page-2.jpg',
+        'https://storage.test/page-3.jpg',
+      ]),
+    }
+    render(
+      <DonorManagement
+        adminEmail="admin@example.com"
+        repository={createRepository([donor])}
+        pageRepository={pageRepository}
+      />,
+    )
+
+    fireEvent.click(await screen.findByLabelText('פעולות עבור תורם 1314'))
+    fireEvent.click(screen.getByRole('button', { name: 'צפייה בעמודי מידע' }))
+
+    expect(await screen.findByRole('dialog', { name: /עמודי מידע — תורם 1314/ })).toBeInTheDocument()
+    expect(pageRepository.getPageUrls).toHaveBeenCalledWith('1314')
+    expect(screen.getAllByRole('img')).toHaveLength(3)
+    const pageLink = screen.getByRole('link', { name: 'פתיחת עמוד 1 בחלון חדש' })
+    expect(pageLink).toHaveAttribute('href', 'https://storage.test/page-1.jpg')
+    expect(pageLink).toHaveAttribute('target', '_blank')
+  })
+
+  it('shows a retryable message when donor pages have not been uploaded', async () => {
+    const donor = {
+      id: 'donor-no-pages', donorNumber: '5006', geneticCarrierStatus: 'חיובי', occupation: '',
+      origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '',
+      heightMeters: 1.8, weightKg: 72, cmvIgg: 'שלילי',
+    } as Donor
+    const pageRepository: DonorPageRepository = {
+      getPageUrls: vi.fn().mockRejectedValue(new Error('private storage error')),
+    }
+    render(
+      <DonorManagement
+        adminEmail="admin@example.com"
+        repository={createRepository([donor])}
+        pageRepository={pageRepository}
+      />,
+    )
+
+    fireEvent.click(await screen.findByLabelText('פעולות עבור תורם 5006'))
+    fireEvent.click(screen.getByRole('button', { name: 'צפייה בעמודי מידע' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('ייתכן שהם טרם הועלו')
+    expect(screen.queryByText('private storage error')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'ניסיון חוזר' }))
+    await waitFor(() => expect(pageRepository.getPageUrls).toHaveBeenCalledTimes(2))
   })
 })

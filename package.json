@@ -9,6 +9,7 @@
     "dev:admin": "npm --workspace @sdc/admin-web run dev",
     "build:admin": "npm --workspace @sdc/admin-web run build",
     "firebase:deploy:firestore": "firebase deploy --only firestore",
+    "firebase:deploy:storage": "firebase deploy --only storage",
     "firebase:deploy:functions": "firebase deploy --only functions",
     "firebase:deploy:hosting": "firebase deploy --only hosting",
     "firebase:emulators": "firebase emulators:start --only firestore",

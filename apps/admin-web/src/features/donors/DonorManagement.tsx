@@ -7,11 +7,14 @@ import {
   type DonorListField,
 } from './donorFieldRules'
 import { displayedDonorMetadata } from './donorNumberMetadata'
+import { DonorPageViewer } from './DonorPageViewer'
+import type { DonorPageRepository } from './donorPageImages'
 import { DuplicateDonorNumberError, firestoreDonorRepository, type DonorRepository } from './donorRepository'
 
 interface DonorManagementProps {
   adminEmail: string
   repository?: DonorRepository
+  pageRepository?: DonorPageRepository
 }
 
 type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
@@ -34,6 +37,7 @@ function isPositiveCmv(value: string) {
 export function DonorManagement({
   adminEmail,
   repository = firestoreDonorRepository,
+  pageRepository,
 }: DonorManagementProps) {
   const [donors, setDonors] = useState<Donor[]>([])
   const [form, setForm] = useState<DonorInput>(emptyDonorInput)
@@ -44,6 +48,7 @@ export function DonorManagement({
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [donorPendingDelete, setDonorPendingDelete] = useState<Donor | null>(null)
+  const [donorPendingView, setDonorPendingView] = useState<Donor | null>(null)
 
   const visibleDonors = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -84,15 +89,16 @@ export function DonorManagement({
   }, [repository])
 
   useEffect(() => {
-    if (!isFormOpen && !donorPendingDelete) return
+    if (!isFormOpen && !donorPendingDelete && !donorPendingView) return
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
       setIsFormOpen(false)
       setDonorPendingDelete(null)
+      setDonorPendingView(null)
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [donorPendingDelete, isFormOpen])
+  }, [donorPendingDelete, donorPendingView, isFormOpen])
 
   function updateTextField(key: keyof DonorInput, value: string) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -235,6 +241,7 @@ export function DonorManagement({
                       <details className="row-actions">
                         <summary aria-label={`פעולות עבור תורם ${displayedDonorMetadata(donor).donorNumber}`}>•••</summary>
                         <div className="action-menu">
+                          <button type="button" onClick={() => setDonorPendingView(donor)}>צפייה בעמודי מידע</button>
                           <button type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
                         </div>
                       </details>
@@ -275,6 +282,7 @@ export function DonorManagement({
                       <div><dt>גובה</dt><dd>{donor.heightMeters ? `${donor.heightMeters} מ׳` : '—'}</dd></div>
                       <div><dt>משקל</dt><dd>{donor.weightKg ? `${donor.weightKg} ק״ג` : '—'}</dd></div>
                     </dl>
+                    <button className="mobile-pages-button" type="button" onClick={() => setDonorPendingView(donor)}>צפייה בשלושת עמודי המידע</button>
                     <button className="mobile-delete-button" type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
                   </div>
                 </details>
@@ -284,6 +292,14 @@ export function DonorManagement({
           </>
         )}
       </section>
+
+      {donorPendingView && (
+        <DonorPageViewer
+          donor={donorPendingView}
+          repository={pageRepository}
+          onClose={() => setDonorPendingView(null)}
+        />
+      )}
 
       {isFormOpen && (
         <div className="modal-backdrop" role="presentation" onMouseDown={closeForm}>

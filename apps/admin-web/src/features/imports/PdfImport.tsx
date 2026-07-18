@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 
 import type { DonorInput } from '../donors/donor'
+import {
+  storeDonorPageImages,
+  type DonorPageSource,
+  type DonorPageUploadProgress,
+  type DonorPageUploadResult,
+  type StoreDonorPageImages,
+} from '../donors/donorPageImages'
 import { normalizeEditableTextField, type DonorListField } from '../donors/donorFieldRules'
 import { extractDonors, type ExtractionResult } from './extractDonors'
 import {
@@ -21,6 +28,7 @@ export interface PdfImportProps {
   repository?: ImportRepository
   scanPdf?: typeof scanDonorPdf
   extractPdf?: typeof extractDonors
+  storePages?: StoreDonorPageImages
 }
 
 type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
@@ -62,6 +70,7 @@ export function PdfImport({
   repository = firestoreImportRepository,
   scanPdf = scanDonorPdf,
   extractPdf = extractDonors,
+  storePages = storeDonorPageImages,
 }: PdfImportProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -77,6 +86,10 @@ export function PdfImport({
   const [rows, setRows] = useState<ReviewRow[]>([])
   const [existingNumbers, setExistingNumbers] = useState<Set<string> | null>(null)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [importPhase, setImportPhase] = useState<'records' | 'images'>('records')
+  const [pageUploadProgress, setPageUploadProgress] = useState<DonorPageUploadProgress | null>(null)
+  const [pageUploadResult, setPageUploadResult] = useState<DonorPageUploadResult | null>(null)
+  const [pageUploadError, setPageUploadError] = useState<string | null>(null)
   const activeOperation = isExtracting || isImporting
   const elapsedSeconds = useElapsedSeconds(activeOperation)
 
@@ -111,6 +124,15 @@ export function PdfImport({
   const selectableRows = reviewedRows.filter((row) => row.duplicateKind !== 'within-file')
   const allSelected = selectableRows.length > 0 && selectableRows.every((row) => row.selected)
   const excludedCount = selectableRows.filter((row) => !row.selected).length
+  const approvedPageSources = reviewedRows.flatMap<DonorPageSource>((row, sourceIndex) => (
+    row.selected && row.duplicateKind !== 'within-file' && Object.keys(row.errors).length === 0
+      ? [{
+          sourceIndex,
+          sourceDonorNumber: row.sourceDonorNumber || row.donor.donorNumber,
+          donorNumber: row.donor.donorNumber,
+        }]
+      : []
+  ))
 
   async function inspectFile(nextFile: File) {
     if (activeOperation) return
@@ -150,6 +172,9 @@ export function PdfImport({
     setRows([])
     setExistingNumbers(null)
     setImportResult(null)
+    setPageUploadResult(null)
+    setPageUploadError(null)
+    setPageUploadProgress(null)
   }
 
   function clearFile() {
@@ -168,6 +193,9 @@ export function PdfImport({
     setRows([])
     setExistingNumbers(null)
     setImportResult(null)
+    setPageUploadResult(null)
+    setPageUploadError(null)
+    setPageUploadProgress(null)
     setError(null)
     setExtractionPhase(forceGemini ? 'gemini-forced' : 'deterministic')
     try {
@@ -221,7 +249,10 @@ export function PdfImport({
     if (!file || !result || !extraction || !existingNumbers || activeOperation) return
     if (invalidSelectedRows.length > 0 || importableRows.length === 0 || importableRows.length > MAX_DONORS_PER_IMPORT) return
     setIsImporting(true)
+    setImportPhase('records')
     setError(null)
+    setPageUploadError(null)
+    setPageUploadResult(null)
     try {
       const nextResult = await repository.importApproved({
         sourceFileName: file.name,
@@ -239,8 +270,33 @@ export function PdfImport({
         skippedDuplicateNumbers: withinFileDuplicateRows.map((row) => row.donor.donorNumber),
       })
       setImportResult(nextResult)
+      setImportPhase('images')
+      try {
+        setPageUploadResult(await storePages(file, result.endPage, approvedPageSources, {
+          onProgress: setPageUploadProgress,
+        }))
+      } catch {
+        setPageUploadError('רשומות התורמים נשמרו, אך העלאת עמודי המידע נכשלה. ניתן לנסות שוב בלי לייבא מחדש.')
+      }
     } catch {
       setError('שמירת הייבוא נכשלה. לא נשמרו שינויים. בדקו את החיבור ונסו שוב.')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  async function retryPageUpload() {
+    if (!file || !result || activeOperation) return
+    setIsImporting(true)
+    setImportPhase('images')
+    setPageUploadError(null)
+    setPageUploadProgress(null)
+    try {
+      setPageUploadResult(await storePages(file, result.endPage, approvedPageSources, {
+        onProgress: setPageUploadProgress,
+      }))
+    } catch {
+      setPageUploadError('העלאת עמודי המידע נכשלה שוב. בדקו את החיבור ונסו מאוחר יותר.')
     } finally {
       setIsImporting(false)
     }
@@ -534,7 +590,7 @@ export function PdfImport({
           <footer className="review-actions">
             <div>
               <button className="primary-button" type="button" disabled={approvalDisabled} onClick={() => void approveImport()}>
-                {isImporting ? 'שומר את הייבוא…' : importableRows.length > 0
+                {isImporting ? (importPhase === 'images' ? 'שומר תמונות…' : 'שומר את הייבוא…') : importableRows.length > 0
                   ? `אישור ושמירת ${importableRows.length} תורמים`
                   : 'אין תורמים לשמירה'}
               </button>
@@ -548,7 +604,12 @@ export function PdfImport({
       {isImporting && (
         <div className="saving-overlay" role="status" aria-live="polite" aria-busy="true">
           <span className="processing-spinner" aria-hidden="true" />
-          <strong>שומר את כל הרשומות באופן אטומי…</strong>
+          <strong>{importPhase === 'records'
+            ? 'שומר את כל הרשומות באופן אטומי…'
+            : 'ממיר ושומר את שלושת עמודי המידע של כל תורם…'}</strong>
+          {importPhase === 'images' && pageUploadProgress && (
+            <span>{pageUploadProgress.completedDonors} מתוך {pageUploadProgress.totalDonors} תורמים</span>
+          )}
           <span>זמן שחלף: <b dir="ltr">{formatElapsed(elapsedSeconds)}</b></span>
         </div>
       )}
@@ -558,13 +619,22 @@ export function PdfImport({
           <span className="success-mark" aria-hidden="true">✓</span>
           <h2 id="import-success-title">הייבוא הושלם בהצלחה</h2>
           <p><strong>{importResult.importedCount}</strong> תורמים חדשים יובאו, <strong>{importResult.replacedCount}</strong> תורמים קיימים הוחלפו, <strong>{importResult.skippedCount}</strong> כפילויות בקובץ דולגו.</p>
+          {pageUploadResult && (
+            <p className="page-upload-success"><strong>{pageUploadResult.uploadedImageCount}</strong> תמונות נשמרו עבור <strong>{pageUploadResult.uploadedDonorCount}</strong> תורמים.</p>
+          )}
+          {pageUploadError && (
+            <div className="page-upload-failure">
+              <p className="inline-alert" role="alert">{pageUploadError}</p>
+              <button className="secondary-button" type="button" disabled={activeOperation} onClick={() => void retryPageUpload()}>ניסיון חוזר להעלאת התמונות</button>
+            </div>
+          )}
           {importResult.replacedDonorNumbers.length > 0 && (
             <details><summary>הצגת מספרי התורמים שהוחלפו</summary><p dir="ltr">{importResult.replacedDonorNumbers.join(', ')}</p></details>
           )}
           {importResult.skippedDuplicateNumbers.length > 0 && (
             <details><summary>הצגת מספרי התורמים שדולגו</summary><p dir="ltr">{importResult.skippedDuplicateNumbers.join(', ')}</p></details>
           )}
-          <button className="primary-button" type="button" onClick={onNavigateToDonors}>מעבר למאגר התורמים</button>
+          <button className="primary-button" type="button" disabled={activeOperation} onClick={onNavigateToDonors}>מעבר למאגר התורמים</button>
         </section>
       )}
     </div>

@@ -123,6 +123,7 @@ describe('PDF import approval workflow', () => {
   })
 
   it('supports editing, selection, row validation, duplicate skipping, audit input, and success state', async () => {
+    const storePages = vi.fn().mockResolvedValue({ uploadedDonorCount: 2, uploadedImageCount: 6 })
     const importApproved = vi.fn().mockResolvedValue({
       importId: 'import-1', importedCount: 1, replacedCount: 1, skippedCount: 1,
       replacedDonorNumbers: ['B-2'], skippedDuplicateNumbers: [' A-1 '],
@@ -143,6 +144,7 @@ describe('PDF import approval workflow', () => {
             validDonor('', { heightMeters: null, weightKg: 400, cmvIgg: '' }),
           ],
         })}
+        storePages={storePages}
       />,
     )
 
@@ -183,8 +185,45 @@ describe('PDF import approval workflow', () => {
       ],
       skippedDuplicateNumbers: [' A-1 '],
     })))
+    await waitFor(() => expect(storePages).toHaveBeenCalledWith(
+      expect.any(File),
+      4,
+      [
+        { sourceIndex: 2, sourceDonorNumber: 'B-2', donorNumber: 'B-2' },
+        { sourceIndex: 3, sourceDonorNumber: 'C-3', donorNumber: 'C-3' },
+      ],
+      expect.objectContaining({ onProgress: expect.any(Function) }),
+    ))
     expect(await screen.findByRole('heading', { name: 'הייבוא הושלם בהצלחה' })).toBeInTheDocument()
     expect(screen.getByRole('status').querySelector('p')).toHaveTextContent('1 תורמים חדשים יובאו, 1 תורמים קיימים הוחלפו, 1 כפילויות בקובץ דולגו')
+    expect(container.querySelector('.page-upload-success')).toHaveTextContent('6 תמונות נשמרו עבור 2 תורמים')
+  })
+
+  it('keeps a retry path when image upload fails after the atomic donor import', async () => {
+    const storePages = vi.fn()
+      .mockRejectedValueOnce(new Error('private storage error'))
+      .mockResolvedValueOnce({ uploadedDonorCount: 1, uploadedImageCount: 3 })
+    const { container } = render(
+      <PdfImport
+        adminEmail="jgabbayj@gmail.com"
+        repository={repository()}
+        scanPdf={vi.fn().mockResolvedValue(scanResult)}
+        extractPdf={vi.fn().mockResolvedValue({
+          ...deterministicMetadata, warnings: [], donors: [validDonor('A-1')],
+        })}
+        storePages={storePages}
+      />,
+    )
+
+    upload(container)
+    fireEvent.click(await screen.findByRole('button', { name: 'חילוץ נתונים' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'אישור ושמירת 1 תורמים' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('רשומות התורמים נשמרו, אך העלאת עמודי המידע נכשלה')
+    expect(screen.queryByText('private storage error')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'ניסיון חוזר להעלאת התמונות' }))
+    await waitFor(() => expect(container.querySelector('.page-upload-success')).toHaveTextContent('3 תמונות נשמרו עבור 1 תורמים'))
+    expect(storePages).toHaveBeenCalledTimes(2)
   })
 
   it('accepts arbitrary semantic values and keeps structural normalization on blur', async () => {
