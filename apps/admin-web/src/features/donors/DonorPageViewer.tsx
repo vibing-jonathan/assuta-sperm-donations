@@ -18,32 +18,32 @@ export function DonorPageViewer({
   onClose,
   repository = storageDonorPageRepository,
 }: DonorPageViewerProps) {
-  const [urls, setUrls] = useState<string[]>([])
+  const [pdfUrl, setPdfUrl] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const donorNumber = displayedDonorMetadata(donor).donorNumber
 
-  const loadPages = useCallback(async () => {
+  const loadPdf = useCallback(async () => {
     setIsLoading(true)
     setError('')
     try {
-      setUrls(await repository.getPageUrls(donorNumber))
+      setPdfUrl(await repository.getPdfUrl(donorNumber))
     } catch {
-      setUrls([])
-      setError('לא נמצאו שלושת עמודי המידע של התורם. ייתכן שהם טרם הועלו.')
+      setPdfUrl('')
+      setError('לא נמצא קובץ המידע של התורם. ייתכן שהוא טרם הועלה.')
     } finally {
       setIsLoading(false)
     }
   }, [donorNumber, repository])
 
   useEffect(() => {
-    void loadPages()
-  }, [loadPages])
+    void loadPdf()
+  }, [loadPdf])
 
   useEffect(() => () => {
     if (typeof URL.revokeObjectURL !== 'function') return
-    urls.filter((url) => url.startsWith('blob:')).forEach((url) => URL.revokeObjectURL(url))
-  }, [urls])
+    if (pdfUrl.startsWith('blob:')) URL.revokeObjectURL(pdfUrl)
+  }, [pdfUrl])
 
   return (
     <div className="modal-backdrop donor-pages-backdrop" role="presentation" onMouseDown={onClose}>
@@ -56,38 +56,31 @@ export function DonorPageViewer({
       >
         <header className="dialog-header">
           <div>
-            <h2 id="donor-pages-title">עמודי מידע — תורם <span dir="ltr">{donorNumber}</span></h2>
-            <p>שלושת עמודי המקור מתוך קטלוג התורמים</p>
+            <h2 id="donor-pages-title">קובץ מידע — תורם <span dir="ltr">{donorNumber}</span></h2>
+            <p>קובץ PDF הכולל את שלושת עמודי המקור מתוך קטלוג התורמים</p>
           </div>
-          <button className="dialog-close" type="button" aria-label="סגירת עמודי המידע" onClick={onClose}>×</button>
+          <button className="dialog-close" type="button" aria-label="סגירת קובץ המידע" onClick={onClose}>×</button>
         </header>
 
         <div className="donor-pages-body">
           {isLoading && (
             <div className="donor-pages-loading" role="status">
               <span className="processing-spinner" aria-hidden="true" />
-              <strong>טוען את עמודי המידע…</strong>
+              <strong>טוען את קובץ המידע…</strong>
             </div>
           )}
           {error && (
             <div className="donor-pages-error">
               <p className="inline-alert" role="alert">{error}</p>
-              <button className="secondary-button" type="button" onClick={() => void loadPages()}>ניסיון חוזר</button>
+              <button className="secondary-button" type="button" onClick={() => void loadPdf()}>ניסיון חוזר</button>
             </div>
           )}
-          {urls.length === 3 && (
-            <div className="donor-page-grid">
-              {urls.map((url, index) => (
-                <article className="donor-page-card" key={url}>
-                  <a href={url} target="_blank" rel="noreferrer" aria-label={`פתיחת עמוד ${index + 1} בחלון חדש`}>
-                    <img src={url} alt={`עמוד מידע ${index + 1} של תורם ${donorNumber}`} />
-                  </a>
-                  <div>
-                    <strong>עמוד {index + 1}</strong>
-                    <a href={url} target="_blank" rel="noreferrer">פתיחה בגודל מלא ↗</a>
-                  </div>
-                </article>
-              ))}
+          {pdfUrl && (
+            <div className="donor-pdf-viewer">
+              <iframe src={pdfUrl} title={`קובץ מידע של תורם ${donorNumber}`} />
+              <a className="primary-button donor-pdf-open" href={pdfUrl} target="_blank" rel="noreferrer">
+                פתיחת קובץ ה-PDF בחלון חדש ↗
+              </a>
             </div>
           )}
         </div>

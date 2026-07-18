@@ -138,18 +138,14 @@ describe('DonorManagement', () => {
     await waitFor(() => expect(repository.remove).toHaveBeenCalledWith('donor-1', 'D-4922***'))
   })
 
-  it('loads and opens all three stored donor information pages', async () => {
+  it('loads, displays, and opens the stored three-page donor PDF', async () => {
     const donor = {
       id: 'donor-pages', donorNumber: '1314', geneticCarrierStatus: 'חיובי', occupation: 'שף',
       origin: 'בריטניה', religion: 'יהודי', skinColor: 'בהיר-משתזף', eyeColor: 'חום',
       hairColor: 'חום', heightMeters: 1.8, weightKg: 72, cmvIgg: 'שלילי',
     } as Donor
     const pageRepository: DonorPageRepository = {
-      getPageUrls: vi.fn().mockResolvedValue([
-        'https://storage.test/page-1.jpg',
-        'https://storage.test/page-2.jpg',
-        'https://storage.test/page-3.jpg',
-      ]),
+      getPdfUrl: vi.fn().mockResolvedValue('https://storage.test/details.pdf'),
     }
     render(
       <DonorManagement
@@ -162,15 +158,16 @@ describe('DonorManagement', () => {
     const rowActions = await screen.findByLabelText('פעולות עבור תורם 1314')
     fireEvent.click(rowActions)
     expect(rowActions.closest('details')).toHaveAttribute('open')
-    fireEvent.click(screen.getByRole('button', { name: 'צפייה בעמודי מידע' }))
+    fireEvent.click(within(rowActions.closest('.desktop-donor-table') as HTMLElement)
+      .getByRole('button', { name: 'צפייה בקובץ המידע' }))
     expect(rowActions.closest('details')).not.toHaveAttribute('open')
 
-    expect(await screen.findByRole('dialog', { name: /עמודי מידע — תורם 1314/ })).toBeInTheDocument()
-    expect(pageRepository.getPageUrls).toHaveBeenCalledWith('1314')
-    expect(screen.getAllByRole('img')).toHaveLength(3)
-    const pageLink = screen.getByRole('link', { name: 'פתיחת עמוד 1 בחלון חדש' })
-    expect(pageLink).toHaveAttribute('href', 'https://storage.test/page-1.jpg')
-    expect(pageLink).toHaveAttribute('target', '_blank')
+    expect(await screen.findByRole('dialog', { name: /קובץ מידע — תורם 1314/ })).toBeInTheDocument()
+    expect(pageRepository.getPdfUrl).toHaveBeenCalledWith('1314')
+    expect(screen.getByTitle('קובץ מידע של תורם 1314')).toHaveAttribute('src', 'https://storage.test/details.pdf')
+    const pdfLink = screen.getByRole('link', { name: /פתיחת קובץ ה-PDF בחלון חדש/ })
+    expect(pdfLink).toHaveAttribute('href', 'https://storage.test/details.pdf')
+    expect(pdfLink).toHaveAttribute('target', '_blank')
   })
 
   it('closes an open row action menu when clicking elsewhere', async () => {
@@ -189,14 +186,14 @@ describe('DonorManagement', () => {
     expect(rowActions.closest('details')).not.toHaveAttribute('open')
   })
 
-  it('shows a retryable message when donor pages have not been uploaded', async () => {
+  it('shows a retryable message when the donor PDF has not been uploaded', async () => {
     const donor = {
       id: 'donor-no-pages', donorNumber: '5006', geneticCarrierStatus: 'חיובי', occupation: '',
       origin: '', religion: '', skinColor: '', eyeColor: '', hairColor: '',
       heightMeters: 1.8, weightKg: 72, cmvIgg: 'שלילי',
     } as Donor
     const pageRepository: DonorPageRepository = {
-      getPageUrls: vi.fn().mockRejectedValue(new Error('private storage error')),
+      getPdfUrl: vi.fn().mockRejectedValue(new Error('private storage error')),
     }
     render(
       <DonorManagement
@@ -206,11 +203,13 @@ describe('DonorManagement', () => {
       />,
     )
 
-    fireEvent.click(await screen.findByLabelText('פעולות עבור תורם 5006'))
-    fireEvent.click(screen.getByRole('button', { name: 'צפייה בעמודי מידע' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('ייתכן שהם טרם הועלו')
+    const rowActions = await screen.findByLabelText('פעולות עבור תורם 5006')
+    fireEvent.click(rowActions)
+    fireEvent.click(within(rowActions.closest('.desktop-donor-table') as HTMLElement)
+      .getByRole('button', { name: 'צפייה בקובץ המידע' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('ייתכן שהוא טרם הועלה')
     expect(screen.queryByText('private storage error')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'ניסיון חוזר' }))
-    await waitFor(() => expect(pageRepository.getPageUrls).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(pageRepository.getPdfUrl).toHaveBeenCalledTimes(2))
   })
 })

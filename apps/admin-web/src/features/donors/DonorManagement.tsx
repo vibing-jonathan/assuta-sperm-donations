@@ -289,7 +289,7 @@ export function DonorManagement({
                           <button type="button" onClick={(event) => {
                             event.currentTarget.closest('details')?.removeAttribute('open')
                             setDonorPendingView(donor)
-                          }}>צפייה בעמודי מידע</button>
+                          }}>צפייה בקובץ המידע</button>
                           <button type="button" onClick={(event) => {
                             event.currentTarget.closest('details')?.removeAttribute('open')
                             setDonorPendingDelete(donor)
@@ -333,7 +333,7 @@ export function DonorManagement({
                       <div><dt>גובה</dt><dd>{donor.heightMeters ? `${donor.heightMeters} מ׳` : '—'}</dd></div>
                       <div><dt>משקל</dt><dd>{donor.weightKg ? `${donor.weightKg} ק״ג` : '—'}</dd></div>
                     </dl>
-                    <button className="mobile-pages-button" type="button" onClick={() => setDonorPendingView(donor)}>צפייה בשלושת עמודי המידע</button>
+                    <button className="mobile-pages-button" type="button" onClick={() => setDonorPendingView(donor)}>צפייה בקובץ המידע</button>
                     <button className="mobile-delete-button" type="button" onClick={() => setDonorPendingDelete(donor)}>מחיקת תורם</button>
                   </div>
                 </details>

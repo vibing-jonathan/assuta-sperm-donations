@@ -19,10 +19,13 @@ export function donorPageObjectNames(donorNumber: string) {
     donorStorageKey(donorNumber),
   ])
 
-  return [...storageKeys].flatMap((storageKey) => Array.from(
-    { length: DONOR_PAGE_COUNT },
-    (_, pageIndex) => `donor-pages/${storageKey}/page-${pageIndex + 1}.jpg`,
-  ))
+  return [...storageKeys].flatMap((storageKey) => [
+    `donor-pages/${storageKey}/details.pdf`,
+    ...Array.from(
+      { length: DONOR_PAGE_COUNT },
+      (_, pageIndex) => `donor-pages/${storageKey}/page-${pageIndex + 1}.jpg`,
+    ),
+  ])
 }
 
 export async function deleteDonorPageImages(

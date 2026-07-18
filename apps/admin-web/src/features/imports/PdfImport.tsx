@@ -2,11 +2,11 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent 
 
 import type { DonorInput } from '../donors/donor'
 import {
-  storeDonorPageImages,
+  storeDonorDetailPdfs,
   type DonorPageSource,
   type DonorPageUploadProgress,
   type DonorPageUploadResult,
-  type StoreDonorPageImages,
+  type StoreDonorDetailPdfs,
 } from '../donors/donorPageImages'
 import { normalizeEditableTextField, type DonorListField } from '../donors/donorFieldRules'
 import { extractDonors, type ExtractionResult } from './extractDonors'
@@ -28,7 +28,7 @@ export interface PdfImportProps {
   repository?: ImportRepository
   scanPdf?: typeof scanDonorPdf
   extractPdf?: typeof extractDonors
-  storePages?: StoreDonorPageImages
+  storePages?: StoreDonorDetailPdfs
 }
 
 type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
@@ -70,7 +70,7 @@ export function PdfImport({
   repository = firestoreImportRepository,
   scanPdf = scanDonorPdf,
   extractPdf = extractDonors,
-  storePages = storeDonorPageImages,
+  storePages = storeDonorDetailPdfs,
 }: PdfImportProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -590,7 +590,7 @@ export function PdfImport({
           <footer className="review-actions">
             <div>
               <button className="primary-button" type="button" disabled={approvalDisabled} onClick={() => void approveImport()}>
-                {isImporting ? (importPhase === 'images' ? 'שומר תמונות…' : 'שומר את הייבוא…') : importableRows.length > 0
+                {isImporting ? (importPhase === 'images' ? 'שומר קובצי PDF…' : 'שומר את הייבוא…') : importableRows.length > 0
                   ? `אישור ושמירת ${importableRows.length} תורמים`
                   : 'אין תורמים לשמירה'}
               </button>
@@ -606,7 +606,7 @@ export function PdfImport({
           <span className="processing-spinner" aria-hidden="true" />
           <strong>{importPhase === 'records'
             ? 'שומר את כל הרשומות באופן אטומי…'
-            : 'ממיר ושומר את שלושת עמודי המידע של כל תורם…'}</strong>
+            : 'יוצר ושומר קובץ PDF בן שלושה עמודים לכל תורם…'}</strong>
           {importPhase === 'images' && pageUploadProgress && (
             <span>{pageUploadProgress.completedDonors} מתוך {pageUploadProgress.totalDonors} תורמים</span>
           )}
@@ -620,12 +620,12 @@ export function PdfImport({
           <h2 id="import-success-title">הייבוא הושלם בהצלחה</h2>
           <p><strong>{importResult.importedCount}</strong> תורמים חדשים יובאו, <strong>{importResult.replacedCount}</strong> תורמים קיימים הוחלפו, <strong>{importResult.skippedCount}</strong> כפילויות בקובץ דולגו.</p>
           {pageUploadResult && (
-            <p className="page-upload-success"><strong>{pageUploadResult.uploadedImageCount}</strong> תמונות נשמרו עבור <strong>{pageUploadResult.uploadedDonorCount}</strong> תורמים.</p>
+            <p className="page-upload-success"><strong>{pageUploadResult.uploadedPdfCount}</strong> קובצי PDF נשמרו עבור <strong>{pageUploadResult.uploadedDonorCount}</strong> תורמים.</p>
           )}
           {pageUploadError && (
             <div className="page-upload-failure">
               <p className="inline-alert" role="alert">{pageUploadError}</p>
-              <button className="secondary-button" type="button" disabled={activeOperation} onClick={() => void retryPageUpload()}>ניסיון חוזר להעלאת התמונות</button>
+              <button className="secondary-button" type="button" disabled={activeOperation} onClick={() => void retryPageUpload()}>ניסיון חוזר להעלאת קובצי ה-PDF</button>
             </div>
           )}
           {importResult.replacedDonorNumbers.length > 0 && (

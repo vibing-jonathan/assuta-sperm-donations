@@ -1378,45 +1378,22 @@ tbody tr:last-child td {
   gap: 0.75rem;
 }
 
-.donor-page-grid {
+.donor-pdf-viewer {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
-.donor-page-card {
-  overflow: hidden;
+.donor-pdf-viewer iframe {
+  width: 100%;
+  height: min(68vh, 52rem);
   border: 1px solid var(--line);
   border-radius: 0.65rem;
   background: var(--surface-soft);
 }
 
-.donor-page-card > a {
-  display: block;
-  aspect-ratio: 9 / 16;
-  overflow: hidden;
-  background: #e8ecf3;
-}
-
-.donor-page-card img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.donor-page-card div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem;
-}
-
-.donor-page-card div a {
-  color: var(--navy-800);
-  font-size: 0.78rem;
-  font-weight: 700;
+.donor-pdf-open {
+  justify-self: start;
+  text-decoration: none;
 }
 
 .page-upload-success {
@@ -2136,16 +2113,8 @@ input:focus-visible {
     padding: 0.85rem;
   }
 
-  .donor-page-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .donor-page-card > a {
-    aspect-ratio: auto;
-  }
-
-  .donor-page-card img {
-    height: auto;
+  .donor-pdf-viewer iframe {
+    height: calc(100dvh - 10rem);
   }
 
   .cmv-unknown {

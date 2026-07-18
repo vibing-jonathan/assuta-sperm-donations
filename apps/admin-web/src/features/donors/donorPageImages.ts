@@ -1,11 +1,10 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import type { PDFDocument as PdfLibDocument } from 'pdf-lib'
 
 import { firebaseApp } from '../../lib/firebase'
 import { donorNumberClaimId } from './donor'
 
 export const DONOR_DETAIL_PAGE_COUNT = 3
-const MAX_RENDER_WIDTH = 1400
-const JPEG_QUALITY = 0.86
 
 export interface DonorPageSource {
   sourceIndex: number
@@ -21,14 +20,14 @@ export interface DonorPageUploadProgress {
 
 export interface DonorPageUploadResult {
   uploadedDonorCount: number
-  uploadedImageCount: number
+  uploadedPdfCount: number
 }
 
 export interface StoreDonorPageOptions {
   onProgress?: (progress: DonorPageUploadProgress) => void
 }
 
-export type StoreDonorPageImages = (
+export type StoreDonorDetailPdfs = (
   file: File,
   summaryEndPage: number,
   sources: DonorPageSource[],
@@ -36,11 +35,11 @@ export type StoreDonorPageImages = (
 ) => Promise<DonorPageUploadResult>
 
 export interface DonorPageRepository {
-  getPageUrls(donorNumber: string): Promise<string[]>
+  getPdfUrl(donorNumber: string): Promise<string>
 }
 
-export function donorPageStoragePath(donorNumber: string, pageIndex: number) {
-  return `donor-pages/${donorNumberClaimId(donorNumber)}/page-${pageIndex + 1}.jpg`
+export function donorDetailPdfStoragePath(donorNumber: string) {
+  return `donor-pages/${donorNumberClaimId(donorNumber)}/details.pdf`
 }
 
 export function detailPageNumbers(summaryEndPage: number, sourceIndex: number, totalPages: number) {
@@ -63,29 +62,30 @@ export function pageMatchesDonor(pageText: string, donorNumber: string) {
   return expected.length > 0 && comparableText(pageText).includes(expected)
 }
 
-function canvasToJpeg(canvas: HTMLCanvasElement) {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => blob ? resolve(blob) : reject(new Error('יצירת תמונת עמוד נכשלה.')),
-      'image/jpeg',
-      JPEG_QUALITY,
-    )
-  })
+export async function createDonorDetailPdf(source: PdfLibDocument, pageNumbers: number[]) {
+  const { PDFDocument } = await import('pdf-lib')
+  const detailPdf = await PDFDocument.create()
+  const copiedPages = await detailPdf.copyPages(source, pageNumbers.map((pageNumber) => pageNumber - 1))
+  copiedPages.forEach((page) => detailPdf.addPage(page))
+  return detailPdf.save({ useObjectStreams: true })
 }
 
-export const storeDonorPageImages: StoreDonorPageImages = async (
+export const storeDonorDetailPdfs: StoreDonorDetailPdfs = async (
   file,
   summaryEndPage,
   sources,
   options = {},
 ) => {
-  if (sources.length === 0) return { uploadedDonorCount: 0, uploadedImageCount: 0 }
+  if (sources.length === 0) return { uploadedDonorCount: 0, uploadedPdfCount: 0 }
 
   const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist')
+  const { PDFDocument } = await import('pdf-lib')
   const { getStorage, ref, uploadBytes } = await import('firebase/storage')
   GlobalWorkerOptions.workerSrc = pdfWorkerUrl
-  const loadingTask = getDocument({ data: new Uint8Array(await file.arrayBuffer()) })
+  const sourceBytes = new Uint8Array(await file.arrayBuffer())
+  const loadingTask = getDocument({ data: sourceBytes.slice() })
   const document = await loadingTask.promise
+  const sourcePdf = await PDFDocument.load(sourceBytes)
   const storage = getStorage(firebaseApp)
 
   try {
@@ -102,27 +102,14 @@ export const storeDonorPageImages: StoreDonorPageImages = async (
         throw new Error(`לא ניתן היה להתאים בבטחה את שלושת העמודים לתורם ${source.donorNumber}.`)
       }
 
-      const blobs: Blob[] = []
-      for (const page of pages) {
-        const baseViewport = page.getViewport({ scale: 1 })
-        const scale = Math.min(2, MAX_RENDER_WIDTH / baseViewport.width)
-        const viewport = page.getViewport({ scale })
-        const canvas = window.document.createElement('canvas')
-        canvas.width = Math.ceil(viewport.width)
-        canvas.height = Math.ceil(viewport.height)
-        const canvasContext = canvas.getContext('2d')
-        if (!canvasContext) throw new Error('הדפדפן אינו תומך בהמרת עמודי PDF לתמונות.')
-        await page.render({ canvas, canvasContext, viewport }).promise
-        blobs.push(await canvasToJpeg(canvas))
-        canvas.width = 0
-        canvas.height = 0
-      }
-
-      await Promise.all(blobs.map((blob, pageIndex) => uploadBytes(
-        ref(storage, donorPageStoragePath(source.donorNumber, pageIndex)),
-        blob,
-        { contentType: 'image/jpeg', cacheControl: 'private,max-age=3600' },
-      )))
+      const detailPdf = await createDonorDetailPdf(sourcePdf, pageNumbers)
+      const uploadBytesBuffer = new Uint8Array(detailPdf.byteLength)
+      uploadBytesBuffer.set(detailPdf)
+      await uploadBytes(
+        ref(storage, donorDetailPdfStoragePath(source.donorNumber)),
+        new Blob([uploadBytesBuffer.buffer], { type: 'application/pdf' }),
+        { contentType: 'application/pdf', cacheControl: 'private,max-age=3600' },
+      )
       options.onProgress?.({
         completedDonors: donorIndex + 1,
         totalDonors: sources.length,
@@ -132,7 +119,7 @@ export const storeDonorPageImages: StoreDonorPageImages = async (
 
     return {
       uploadedDonorCount: sources.length,
-      uploadedImageCount: sources.length * DONOR_DETAIL_PAGE_COUNT,
+      uploadedPdfCount: sources.length,
     }
   } finally {
     await loadingTask.destroy()
@@ -140,13 +127,10 @@ export const storeDonorPageImages: StoreDonorPageImages = async (
 }
 
 export const storageDonorPageRepository: DonorPageRepository = {
-  async getPageUrls(donorNumber) {
+  async getPdfUrl(donorNumber) {
     const { getBlob, getStorage, ref } = await import('firebase/storage')
     const storage = getStorage(firebaseApp)
-    const blobs = await Promise.all(Array.from(
-      { length: DONOR_DETAIL_PAGE_COUNT },
-      (_, pageIndex) => getBlob(ref(storage, donorPageStoragePath(donorNumber, pageIndex))),
-    ))
-    return blobs.map((blob) => URL.createObjectURL(blob))
+    const blob = await getBlob(ref(storage, donorDetailPdfStoragePath(donorNumber)))
+    return URL.createObjectURL(blob)
   },
 }
