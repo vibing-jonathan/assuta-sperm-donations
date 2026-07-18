@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 import type { Donor } from './donor'
 import {
@@ -19,6 +20,7 @@ export function DonorProfileAvatar({
   const [visible, setVisible] = useState(typeof IntersectionObserver === 'undefined')
   const [url, setUrl] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const profile = donor.profileImage
   const storagePath = profile?.storagePath
 
@@ -45,17 +47,63 @@ export function DonorProfileAvatar({
     return () => { active = false }
   }, [repository, storagePath, visible])
 
+  useEffect(() => {
+    if (!isPreviewOpen) return
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsPreviewOpen(false)
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [isPreviewOpen])
+
   const isProcessing = profile?.status === 'pending' || profile?.status === 'generating'
   const status = isProcessing
     ? 'תמונת הפרופיל נוצרת ברקע'
     : profile?.status === 'failed' || failed ? 'יצירת תמונת הפרופיל נכשלה' : 'תמונת פרופיל'
 
   return (
-    <span ref={host} className={`donor-profile-avatar ${isProcessing ? 'is-processing' : ''}`} title={status} aria-label={status}>
+    <span ref={host} className={`donor-profile-avatar ${isProcessing ? 'is-processing' : ''}`} title={status}>
       {url && !failed
-        ? <img src={url} alt="" loading="lazy" decoding="async" />
-        : <span aria-hidden="true">{isProcessing ? '◌' : '♙'}</span>}
+        ? (
+            <button
+              className="donor-profile-avatar-button"
+              type="button"
+              aria-label={`הגדלת תמונת הפרופיל של תורם ${donor.donorNumber}`}
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                setIsPreviewOpen(true)
+              }}
+            >
+              <img src={url} alt="" loading="lazy" decoding="async" />
+            </button>
+          )
+        : <span aria-label={status}><span aria-hidden="true">{isProcessing ? '◌' : '♙'}</span></span>}
       {isProcessing && <i aria-hidden="true" />}
+      {isPreviewOpen && url && createPortal(
+        <div className="profile-preview-backdrop" role="presentation" onMouseDown={() => setIsPreviewOpen(false)}>
+          <section
+            className="profile-preview-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`profile-preview-title-${donor.id}`}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <h2 className="sr-only" id={`profile-preview-title-${donor.id}`}>
+              תמונת פרופיל של תורם {donor.donorNumber}
+            </h2>
+            <button
+              className="profile-preview-close"
+              type="button"
+              aria-label="סגירת התמונה"
+              autoFocus
+              onClick={() => setIsPreviewOpen(false)}
+            >×</button>
+            <img src={url} alt={`תמונת פרופיל סינתטית של תורם ${donor.donorNumber}`} />
+          </section>
+        </div>,
+        document.body,
+      )}
     </span>
   )
 }

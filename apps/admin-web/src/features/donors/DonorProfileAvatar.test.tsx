@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Donor } from './donor'
@@ -31,5 +31,21 @@ describe('DonorProfileAvatar', () => {
 
     expect(screen.getByLabelText('תמונת הפרופיל נוצרת ברקע')).toBeInTheDocument()
     expect(repository.getImageUrl).not.toHaveBeenCalled()
+  })
+
+  it('opens the original image in a dismissible full-resolution preview without refetching', async () => {
+    const repository = { getImageUrl: vi.fn().mockResolvedValue('blob:full-resolution-profile') }
+    render(<DonorProfileAvatar donor={{
+      ...donor,
+      profileImage: { status: 'ready', inputHash: 'c'.repeat(64), storagePath: 'profiles/full.jpg' },
+    }} repository={repository} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'הגדלת תמונת הפרופיל של תורם 1000' }))
+    const dialog = screen.getByRole('dialog', { name: 'תמונת פרופיל של תורם 1000' })
+    expect(dialog.querySelector('img')).toHaveAttribute('src', 'blob:full-resolution-profile')
+    expect(repository.getImageUrl).toHaveBeenCalledOnce()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

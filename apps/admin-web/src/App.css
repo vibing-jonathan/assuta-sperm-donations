@@ -607,6 +607,22 @@ tbody tr:last-child td {
   object-fit: cover;
 }
 
+.donor-profile-avatar-button {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  place-items: center;
+}
+
+.donor-profile-avatar-button:focus-visible {
+  outline: 3px solid rgb(12 112 100 / 35%);
+  outline-offset: -3px;
+}
+
 .donor-profile-avatar.is-processing i {
   position: absolute;
   inset: 2px;
@@ -618,6 +634,57 @@ tbody tr:last-child td {
 
 @keyframes profile-avatar-spin {
   to { transform: rotate(360deg); }
+}
+
+.profile-preview-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  padding: 1.5rem;
+  background: rgb(7 18 32 / 78%);
+  cursor: zoom-out;
+  place-items: center;
+}
+
+.profile-preview-dialog {
+  position: relative;
+  overflow: hidden;
+  max-width: 92vw;
+  max-height: 90vh;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 1rem;
+  background: #111b27;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 45%);
+  cursor: default;
+}
+
+.profile-preview-dialog > img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(92vw, 1024px);
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+.profile-preview-close {
+  position: absolute;
+  z-index: 1;
+  top: 0.75rem;
+  left: 0.75rem;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 45%);
+  border-radius: 50%;
+  background: rgb(7 18 32 / 75%);
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  place-items: center;
 }
 
 .cmv-chip {
