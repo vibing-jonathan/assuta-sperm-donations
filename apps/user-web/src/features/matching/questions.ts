@@ -26,6 +26,7 @@ function withAny(values: string[]) {
 
 export function buildQuestions(donors: Donor[]): QuestionDefinition[] {
   const religions = distinct(donors.flatMap((donor) => splitListValues(donor.religion)))
+    .filter((religion) => religion !== 'לאחר גיור')
   const skinColors = distinct(donors.map((donor) => donor.skinColor))
 
   return [

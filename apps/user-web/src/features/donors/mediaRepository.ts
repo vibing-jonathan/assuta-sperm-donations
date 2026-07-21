@@ -1,7 +1,8 @@
-import { firebaseApp } from '../../lib/firebase'
+import { auth } from '../../lib/firebase'
 import { donorDisplayNumber } from './donor'
 
 export const MEDIA_LOAD_TIMEOUT_MS = 45_000
+export const DONOR_MEDIA_ENDPOINT = 'https://europe-west1-assuta-sperm-donations.cloudfunctions.net/getDonorMedia'
 
 export interface DonorMediaRepository {
   getProfileImage(storagePath: string): Promise<Blob>
@@ -22,19 +23,32 @@ export function donorDetailPdfPath(donorNumber: string) {
   return `donor-pages/${donorStorageKey(donorNumber)}/details.pdf`
 }
 
-async function storageBlob(path: string) {
-  const { getBlob, getStorage, ref } = await import('firebase/storage')
-  let timeoutId: ReturnType<typeof setTimeout> | undefined
+const mediaBlobCache = new Map<string, Promise<Blob>>()
+
+async function downloadMediaBlob(path: string) {
+  const user = auth.currentUser
+  if (!user) throw new Error('User authentication is required.')
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), MEDIA_LOAD_TIMEOUT_MS)
   try {
-    return await Promise.race([
-      getBlob(ref(getStorage(firebaseApp), path)),
-      new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Media download timed out.')), MEDIA_LOAD_TIMEOUT_MS)
-      }),
-    ])
+    const response = await fetch(`${DONOR_MEDIA_ENDPOINT}?path=${encodeURIComponent(path)}`, {
+      headers: { Authorization: `Bearer ${await user.getIdToken()}` },
+      signal: controller.signal,
+    })
+    if (!response.ok) throw new Error(`Media download failed (${response.status}).`)
+    return response.blob()
   } finally {
-    if (timeoutId !== undefined) clearTimeout(timeoutId)
+    clearTimeout(timeoutId)
   }
+}
+
+function storageBlob(path: string) {
+  const cached = mediaBlobCache.get(path)
+  if (cached) return cached
+  const request = downloadMediaBlob(path)
+  mediaBlobCache.set(path, request)
+  request.catch(() => mediaBlobCache.delete(path))
+  return request
 }
 
 export const firebaseDonorMediaRepository: DonorMediaRepository = {

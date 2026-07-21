@@ -69,8 +69,8 @@ describe('closest donor ranking', () => {
 describe('dynamic questions', () => {
   it('omits country and hair preferences and offers only grouped eye shades', () => {
     const donors = [
-      donor({ origin: 'ישראל, רוסיה', eyeColor: 'חום-ירוק', hairColor: 'חום בהיר-שחור, גלי' }),
-      donor({ id: 'two', origin: 'פולין', eyeColor: 'כחול', hairColor: 'שחור, מתולתל' }),
+      donor({ origin: 'ישראל, רוסיה', religion: 'יהודי, לאחר גיור', eyeColor: 'חום-ירוק', hairColor: 'חום בהיר-שחור, גלי' }),
+      donor({ id: 'two', origin: 'פולין', religion: 'לאחר גיור', eyeColor: 'כחול', hairColor: 'שחור, מתולתל' }),
     ]
     const questions = buildQuestions(donors)
     expect(questions.map((question) => question.key)).toEqual([
@@ -78,5 +78,7 @@ describe('dynamic questions', () => {
     ])
     expect(questions.find((question) => question.key === 'eyeColor')?.options)
       .toEqual([LIGHT_EYES_OPTION, DARK_EYES_OPTION, ANY_OPTION])
+    expect(questions.find((question) => question.key === 'religion')?.options)
+      .toEqual(['יהודי', ANY_OPTION])
   })
 })

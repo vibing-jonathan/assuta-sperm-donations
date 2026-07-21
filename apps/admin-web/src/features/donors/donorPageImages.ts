@@ -1,6 +1,7 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
-import { auth, firebaseApp } from '../../lib/firebase'
+import { auth } from '../../lib/firebase'
+import { getDonorMediaBlob } from './donorMediaRepository'
 import { donorNumberClaimId } from './donor'
 import { parseDonorProfileImageInput, type DonorProfileImageInput } from './donorProfileInput'
 
@@ -182,9 +183,7 @@ export const storeDonorDetailPdfs: StoreDonorDetailPdfs = async (
 
 export const storageDonorPageRepository: DonorPageRepository = {
   async getPdfUrl(donorNumber) {
-    const { getBlob, getStorage, ref } = await import('firebase/storage')
-    const storage = getStorage(firebaseApp)
-    const blob = await getBlob(ref(storage, donorDetailPdfStoragePath(donorNumber)))
+    const blob = await getDonorMediaBlob(donorDetailPdfStoragePath(donorNumber))
     return URL.createObjectURL(blob)
   },
 }
