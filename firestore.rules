@@ -14,7 +14,8 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
           'donorNumber', 'geneticCarrierStatus', 'occupation', 'origin', 'religion', 'skinColor',
           'eyeColor', 'hairColor', 'heightMeters', 'weightKg', 'cmvIgg',
-          'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'importId'
+          'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'importId',
+          'profileImageInput', 'profileImage'
         ])
         && request.resource.data.keys().hasAll([
           'donorNumber', 'geneticCarrierStatus', 'occupation', 'origin', 'religion', 'skinColor',
@@ -45,15 +46,19 @@ service cloud.firestore {
     }
 
     match /donors/{donorId} {
-      allow read, delete: if isAdmin();
+      allow read: if isAdmin();
+      allow delete: if isAdmin();
       allow create: if isAdmin()
         && hasValidDonorSchema()
+        && !request.resource.data.keys().hasAny(['profileImageInput', 'profileImage'])
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
         && request.resource.data.createdBy == request.auth.token.email
         && request.resource.data.updatedBy == request.auth.token.email;
       allow update: if isAdmin()
         && hasValidDonorSchema()
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['profileImageInput', 'profileImage'])
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.createdBy == resource.data.createdBy
         && request.resource.data.updatedAt == request.time
@@ -79,6 +84,10 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.token.email;
       allow delete: if isAdmin();
       allow update: if false;
+    }
+
+    match /donorProfileJobs/{jobId} {
+      allow read, write: if false;
     }
 
     match /donorImports/{importId} {

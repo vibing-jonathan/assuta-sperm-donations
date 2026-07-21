@@ -7,16 +7,24 @@
   ],
   "scripts": {
     "dev:admin": "npm --workspace @sdc/admin-web run dev",
+    "dev:user": "npm --workspace @sdc/user-web run dev",
     "build:admin": "npm --workspace @sdc/admin-web run build",
+    "build:user": "npm --workspace @sdc/user-web run build",
+    "build:hosting": "npm run build:admin && npm run build:user",
     "firebase:deploy:firestore": "firebase deploy --only firestore",
+    "firebase:deploy:storage": "firebase deploy --only storage",
     "firebase:deploy:functions": "firebase deploy --only functions",
     "firebase:deploy:hosting": "firebase deploy --only hosting",
+    "firebase:deploy:hosting:admin": "firebase deploy --only hosting:admin",
+    "firebase:deploy:hosting:client": "firebase deploy --only hosting:client",
     "firebase:emulators": "firebase emulators:start --only firestore",
     "firebase:version": "firebase --version",
     "build:functions": "npm --prefix functions run build",
     "test:functions": "npm --prefix functions run test",
     "lint:admin": "npm --workspace @sdc/admin-web run lint",
-    "test:admin": "npm --workspace @sdc/admin-web run test"
+    "lint:user": "npm --workspace @sdc/user-web run lint",
+    "test:admin": "npm --workspace @sdc/admin-web run test",
+    "test:user": "npm --workspace @sdc/user-web run test"
   },
   "devDependencies": {
     "firebase-tools": "^15.23.0"

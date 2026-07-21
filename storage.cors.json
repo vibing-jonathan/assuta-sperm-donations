@@ -1,0 +1,23 @@
+[
+  {
+    "origin": [
+      "https://assuta-sperm-donations.web.app",
+      "https://assuta-sperm-donations.firebaseapp.com",
+      "https://admin-sperm-donations.web.app",
+      "https://admin-sperm-donations.firebaseapp.com",
+      "https://sperm-donations.web.app",
+      "https://sperm-donations.firebaseapp.com",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": [
+      "Content-Type",
+      "Content-Length",
+      "Content-Range",
+      "Accept-Ranges",
+      "ETag"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

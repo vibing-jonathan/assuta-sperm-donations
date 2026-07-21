@@ -8,6 +8,7 @@ import {
 export interface ReviewRow {
   id: string
   donor: DonorInput
+  sourceDonorNumber: string
   selected: boolean
 }
 
@@ -18,7 +19,12 @@ export interface ReviewedRow extends ReviewRow {
 }
 
 export function createReviewRows(donors: DonorInput[]): ReviewRow[] {
-  return donors.map((donor, index) => ({ id: `row-${index + 1}`, donor, selected: true }))
+  return donors.map((donor, index) => ({
+    id: `row-${index + 1}`,
+    donor,
+    sourceDonorNumber: donor.donorNumber,
+    selected: true,
+  }))
 }
 
 export function analyzeReviewRows(rows: ReviewRow[], existingNumbers: ReadonlySet<string>): ReviewedRow[] {

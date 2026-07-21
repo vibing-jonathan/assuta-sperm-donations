@@ -18,6 +18,12 @@ export interface DonorInput {
 export interface Donor extends DonorInput {
   id: string
   importId?: string
+  profileImage?: {
+    status: 'pending' | 'generating' | 'ready' | 'failed'
+    inputHash: string
+    storagePath?: string
+    errorCode?: string
+  }
 }
 
 export const emptyDonorInput: DonorInput = {

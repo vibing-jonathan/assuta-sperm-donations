@@ -10,12 +10,15 @@
   "scripts": {
     "build": "rimraf lib && tsc",
     "test": "vitest run src",
-    "check": "npm run build && npm run test"
+    "check": "npm run build && npm run test",
+    "test:profile-images": "npm run build && node --env-file=../.env scripts/generateProfileImageComparison.mjs",
+    "test:profile-images:openai": "npm run build && node --env-file=../.env scripts/generateProfileImageComparison.mjs --provider=openai"
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
     "firebase-admin": "^13.10.0",
     "firebase-functions": "^7.2.5",
+    "pdf-lib": "^1.17.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {

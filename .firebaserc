@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "assuta-sperm-donations"
+  },
+  "targets": {
+    "assuta-sperm-donations": {
+      "hosting": {
+        "admin": [
+          "admin-sperm-donations"
+        ],
+        "client": [
+          "sperm-donations"
+        ]
+      }
+    }
   }
 }

@@ -164,8 +164,14 @@ export async function executeAtomicImport(store: AtomicImportStore, input: Appro
 
       replacements.forEach((candidate, index) => {
         const existingDonor = replacementSnapshots[index]
+        const serverOwnedFields = existingDonor?.data
+          ? Object.fromEntries(['profileImageInput', 'profileImage'].flatMap((field) => (
+              existingDonor.data?.[field] === undefined ? [] : [[field, existingDonor.data[field]]]
+            )))
+          : {}
         transaction.set(`donors/${candidate.targetDonorId}`, {
           ...candidate.donor,
+          ...serverOwnedFields,
           importId,
           createdAt: existingDonor?.data?.createdAt ?? timestamp,
           createdBy: typeof existingDonor?.data?.createdBy === 'string'

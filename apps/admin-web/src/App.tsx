@@ -17,7 +17,7 @@ interface AdminDashboardProps {
   email: string
   onSignOut: () => void | Promise<void>
   donorRepository?: DonorRepository
-  pdfImportProps?: Partial<Pick<PdfImportProps, 'repository' | 'scanPdf' | 'extractPdf'>>
+  pdfImportProps?: Partial<Pick<PdfImportProps, 'repository' | 'scanPdf' | 'extractPdf' | 'storePages'>>
   userAccessRepository?: UserAccessRepository
 }
 

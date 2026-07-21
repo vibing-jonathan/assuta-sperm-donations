@@ -5,10 +5,11 @@ Hebrew administrative and client applications for managing and reviewing sperm d
 ## Architecture
 
 - `apps/admin-web` — React and TypeScript administrative web application with Hebrew RTL support.
+- `apps/user-web` — mobile-first React and TypeScript donor matching application with Hebrew RTL support.
 - Firebase Authentication — administrator email/password sign-in.
-- Cloud Firestore — donor records and future import metadata.
-- Firestore Security Rules — server-enforced access for approved administrator accounts.
-- `apps/mobile` — future React Native client application.
+- Cloud Firestore — donor records, import metadata, and the shared user-app credential.
+- Firebase Functions — protected admin workflows plus the user-app login and sanitized donor-list endpoints.
+- Firestore and Storage Security Rules — server-enforced separation between administrator and user-app access.
 
 ## Development
 
@@ -30,12 +31,21 @@ Run the admin web app:
 npm.cmd run dev:admin
 ```
 
+Run the user web app:
+
+```powershell
+npm.cmd run dev:user
+```
+
 Verify the project:
 
 ```powershell
 npm.cmd run lint:admin
 npm.cmd run test:admin
 npm.cmd run build:admin
+npm.cmd run lint:user
+npm.cmd run test:user
+npm.cmd run build:user
 ```
 
 ## Firebase
@@ -87,12 +97,73 @@ after every comma.
 The UI limits each approval to 249 new or replacement donors so donor documents, uniqueness claims, and the audit
 record remain below Firestore's 500-write transaction limit.
 
+### Donor detail pages
+
+After the donor records are approved, the browser verifies the three consecutive detail pages for
+every selected donor and uploads the original catalog once to an authenticated Firebase Function.
+The Function copies each donor's pages into a separate three-page PDF without rasterizing them. The
+expected donor number must appear in all three PDF text layers before upload, preventing a shifted
+catalog page from being attached to the wrong donor. Each file is stored at
+`donor-pages/{normalizedDonorKey}/details.pdf` in Firebase Storage. Only approved administrators can
+request generation or view it; direct client writes are denied. The donor dashboard loads the PDF on
+demand and provides a link to open it in a new window. If PDF upload fails
+after the atomic Firestore import, the success screen keeps a separate retry action without repeating
+the donor import. Deleting a donor record triggers backend cleanup of its stored PDF and any legacy
+page images; the cleanup is idempotent and retries transient Storage failures.
+The donor dashboard also provides a confirmation-protected bulk deletion action. Its admin-only
+callable Function deletes donors and uniqueness claims in bounded Firestore batches; image cleanup
+continues through the same deletion trigger.
+
 ### Shared user-app access
 
 The admin Settings page manages the shared user-app username and password stored in the admin-only
 `appSettings/userAccess` Firestore document. This is intentionally a basic, shared access gate rather
-than individual authentication. The future user app must validate the credential through a controlled
-backend endpoint; Firestore rules do not allow unauthenticated clients to read the stored password.
+than individual authentication. The user app submits it to the `loginUserApp` callable Function,
+which performs a timing-safe comparison and returns a restricted Firebase custom token. The stored
+credential is never readable by the user client.
+
+`loginUserApp` signs a Firebase custom token. Its second-generation Functions runtime service account
+must have `roles/iam.serviceAccountTokenCreator` on itself so the Admin SDK can call
+`iam.serviceAccounts.signBlob`. In production this is the default Compute Engine service account;
+the project IAM binding is configured accordingly.
+
+The authenticated user app loads donor data through `listUserDonors`. The Function returns a strict
+field whitelist, so creation metadata, administrator email addresses, import identifiers, and profile
+generation inputs remain private. The donor collection itself remains admin-only in Firestore rules.
+The restricted user token can read only ready profile images and generated donor detail PDFs from
+Storage; all client writes remain denied.
+
+### Closest-match ranking
+
+The eight questionnaire option sets are derived from the values currently available in the donor
+collection, and every question includes `לא משנה לי`. Answering a question never removes a donor.
+Instead, the user app ranks the complete donor list with weighted similarity criteria and displays a
+proximity percentage. Origin selections support partial overlap, missing donor values receive a small
+neutral score, and genetic-carrier/CMV preferences have more influence than appearance preferences.
+The matching engine ranks the full donor pool, and the interface lets the user browse every ranked
+donor in a mobile swipe deck. Swiping is navigation only: explicit previous/next controls and a
+position indicator remain available, and every card opens the complete donor profile and original
+three-page PDF. When every answer is flexible, all available donors are shown without a proximity
+percentage. The interface describes the score as a comparison aid rather than a perfect match or
+medical recommendation.
+
+### Hosting
+
+Both frontends use separate Firebase Web App registrations and separate Hosting sites inside the same
+Firebase project:
+
+- `admin-app` → `https://admin-sperm-donations.web.app`
+- `client-app` → `https://sperm-donations.web.app`
+
+The `admin` and `client` deploy targets are recorded in `.firebaserc`, and each Hosting configuration
+builds and deploys only its corresponding application. The old default
+`assuta-sperm-donations.web.app` site is intentionally not part of this repository's Hosting targets.
+Use `npm.cmd run firebase:deploy:hosting` for both sites, or the `:admin` and `:client` variants for an
+individual site. Development, staging, and production should use separate Firebase projects.
+
+The Storage bucket CORS policy must allow both Hosting origins so authenticated browser downloads of
+profile images and donor PDFs succeed. The production policy is mirrored in `storage.cors.json`; apply
+that file to a replacement bucket before deploying either frontend.
 
 ## Google Stitch MCP
 

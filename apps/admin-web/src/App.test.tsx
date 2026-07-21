@@ -13,7 +13,9 @@ const repository: DonorRepository = {
     return () => undefined
   },
   add: vi.fn(),
+  update: vi.fn(),
   remove: vi.fn(),
+  removeAll: vi.fn(),
 }
 
 const userAccessRepository: UserAccessRepository = {
