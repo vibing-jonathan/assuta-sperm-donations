@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 
 import { emptyDonorInput, validateDonor, type Donor, type DonorInput } from './donor'
 import {
@@ -25,6 +26,17 @@ interface DonorManagementProps {
 }
 
 type EditableTextField = 'donorNumber' | 'occupation' | DonorListField
+
+interface OpenActionMenu {
+  donor: Donor
+  top: number
+  left: number
+}
+
+const actionMenuWidth = 144
+const actionMenuHeight = 132
+const actionMenuGap = 4
+const viewportMargin = 8
 
 const textFields: Array<{ key: EditableTextField; label: string; placeholder?: string }> = [
   { key: 'donorNumber', label: 'מס׳ תורם', placeholder: 'לדוגמה: D-5000' },
@@ -79,6 +91,7 @@ export function DonorManagement({
   const [donorPendingView, setDonorPendingView] = useState<Donor | null>(null)
   const [isRemoveAllOpen, setIsRemoveAllOpen] = useState(false)
   const [removeAllError, setRemoveAllError] = useState<string | null>(null)
+  const [openActionMenu, setOpenActionMenu] = useState<OpenActionMenu | null>(null)
 
   const visibleDonors = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -119,7 +132,7 @@ export function DonorManagement({
   }, [repository])
 
   useEffect(() => {
-    if (!isFormOpen && !donorPendingDelete && !donorPendingView && !isRemoveAllOpen) return
+    if (!isFormOpen && !donorPendingDelete && !donorPendingView && !isRemoveAllOpen && !openActionMenu) return
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key !== 'Escape') return
       if (isSaving) return
@@ -129,24 +142,45 @@ export function DonorManagement({
       setForm(emptyDonorInput)
       setDonorPendingDelete(null)
       setDonorPendingView(null)
+      setOpenActionMenu(null)
       if (!isRemovingAll) setIsRemoveAllOpen(false)
     }
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [donorPendingDelete, donorPendingView, isFormOpen, isRemoveAllOpen, isRemovingAll, isSaving])
+  }, [donorPendingDelete, donorPendingView, isFormOpen, isRemoveAllOpen, isRemovingAll, isSaving, openActionMenu])
 
   useEffect(() => {
-    function closeRowActionsOnOutsideClick(event: MouseEvent) {
-      const target = event.target
-      if (!(target instanceof Node)) return
-      document.querySelectorAll<HTMLDetailsElement>('.row-actions[open]').forEach((details) => {
-        if (!details.contains(target)) details.removeAttribute('open')
-      })
+    if (!openActionMenu) return
+    const closeActionMenu = () => setOpenActionMenu(null)
+    document.addEventListener('click', closeActionMenu)
+    window.addEventListener('resize', closeActionMenu)
+    window.addEventListener('scroll', closeActionMenu, true)
+    return () => {
+      document.removeEventListener('click', closeActionMenu)
+      window.removeEventListener('resize', closeActionMenu)
+      window.removeEventListener('scroll', closeActionMenu, true)
     }
+  }, [openActionMenu])
 
-    document.addEventListener('click', closeRowActionsOnOutsideClick)
-    return () => document.removeEventListener('click', closeRowActionsOnOutsideClick)
-  }, [])
+  function toggleActionMenu(donor: Donor, trigger: HTMLButtonElement) {
+    if (openActionMenu?.donor.id === donor.id) {
+      setOpenActionMenu(null)
+      return
+    }
+    const rect = trigger.getBoundingClientRect()
+    const left = Math.min(
+      Math.max(viewportMargin, rect.left),
+      Math.max(viewportMargin, window.innerWidth - actionMenuWidth - viewportMargin),
+    )
+    const fitsBelow = rect.bottom + actionMenuGap + actionMenuHeight <= window.innerHeight - viewportMargin
+    setOpenActionMenu({
+      donor,
+      left,
+      top: fitsBelow
+        ? rect.bottom + actionMenuGap
+        : Math.max(viewportMargin, rect.top - actionMenuHeight - actionMenuGap),
+    })
+  }
 
   useEffect(() => {
     if (!profilePhotoFile) {
@@ -364,23 +398,19 @@ export function DonorManagement({
                       ) : '—'}
                     </td>
                     <td className="actions-cell">
-                      <details className="row-actions">
-                        <summary aria-label={`פעולות עבור תורם ${displayedDonorMetadata(donor).donorNumber}`}>•••</summary>
-                        <div className="action-menu">
-                          <button type="button" onClick={(event) => {
-                            event.currentTarget.closest('details')?.removeAttribute('open')
-                            openDonorForm(donor)
-                          }}>עריכת תורם</button>
-                          <button type="button" onClick={(event) => {
-                            event.currentTarget.closest('details')?.removeAttribute('open')
-                            setDonorPendingView(donor)
-                          }}>צפייה בקובץ המידע</button>
-                          <button type="button" onClick={(event) => {
-                            event.currentTarget.closest('details')?.removeAttribute('open')
-                            setDonorPendingDelete(donor)
-                          }}>מחיקת תורם</button>
-                        </div>
-                      </details>
+                      <div className="row-actions">
+                        <button
+                          className="row-actions-trigger"
+                          type="button"
+                          aria-label={`פעולות עבור תורם ${displayedDonorMetadata(donor).donorNumber}`}
+                          aria-haspopup="menu"
+                          aria-expanded={openActionMenu?.donor.id === donor.id}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            toggleActionMenu(donor, event.currentTarget)
+                          }}
+                        >•••</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -430,6 +460,30 @@ export function DonorManagement({
           </>
         )}
       </section>
+
+      {openActionMenu && createPortal(
+        <div
+          className="action-menu action-menu-portal"
+          role="menu"
+          aria-label={`פעולות עבור תורם ${displayedDonorMetadata(openActionMenu.donor).donorNumber}`}
+          style={{ top: openActionMenu.top, left: openActionMenu.left }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button type="button" role="menuitem" onClick={() => {
+            setOpenActionMenu(null)
+            openDonorForm(openActionMenu.donor)
+          }}>עריכת תורם</button>
+          <button type="button" role="menuitem" onClick={() => {
+            setOpenActionMenu(null)
+            setDonorPendingView(openActionMenu.donor)
+          }}>צפייה בקובץ המידע</button>
+          <button type="button" role="menuitem" onClick={() => {
+            setOpenActionMenu(null)
+            setDonorPendingDelete(openActionMenu.donor)
+          }}>מחיקת תורם</button>
+        </div>,
+        document.body,
+      )}
 
       {donorPendingView && (
         <DonorPageViewer

@@ -129,7 +129,7 @@ describe('DonorManagement', () => {
     expect(mobileList?.querySelector('.mobile-donor-card')).toHaveClass('negative-carrier-highlight')
     const carrierStatus = within(within(donorRow).getAllByRole('cell')[1]!).getByText('שלילי')
     expect(carrierStatus).toHaveClass('genetic-carrier-safe')
-    fireEvent.click(within(desktopTable as HTMLElement).getByRole('button', { name: 'מחיקת תורם' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'מחיקת תורם' }))
 
     const dialog = screen.getByRole('alertdialog', { name: 'מחיקת תורם' })
     expect(dialog).toBeInTheDocument()
@@ -158,10 +158,11 @@ describe('DonorManagement', () => {
 
     const rowActions = await screen.findByLabelText('פעולות עבור תורם 1314')
     fireEvent.click(rowActions)
-    expect(rowActions.closest('details')).toHaveAttribute('open')
-    fireEvent.click(within(rowActions.closest('.desktop-donor-table') as HTMLElement)
-      .getByRole('button', { name: 'צפייה בקובץ המידע' }))
-    expect(rowActions.closest('details')).not.toHaveAttribute('open')
+    expect(rowActions).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('menu', { name: 'פעולות עבור תורם 1314' })).toBeInTheDocument()
+    expect(rowActions.closest('.desktop-donor-table')?.querySelector('.action-menu')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'צפייה בקובץ המידע' }))
+    expect(rowActions).toHaveAttribute('aria-expanded', 'false')
 
     expect(await screen.findByRole('dialog', { name: /קובץ מידע — תורם 1314/ })).toBeInTheDocument()
     expect(pageRepository.getPdfUrl).toHaveBeenCalledWith('1314')
@@ -181,10 +182,10 @@ describe('DonorManagement', () => {
 
     const rowActions = await screen.findByLabelText('פעולות עבור תורם 1314')
     fireEvent.click(rowActions)
-    expect(rowActions.closest('details')).toHaveAttribute('open')
+    expect(rowActions).toHaveAttribute('aria-expanded', 'true')
 
     fireEvent.click(screen.getByRole('heading', { name: 'ניהול תורמים' }))
-    expect(rowActions.closest('details')).not.toHaveAttribute('open')
+    expect(rowActions).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('edits all donor fields from the row action menu', async () => {
@@ -198,8 +199,7 @@ describe('DonorManagement', () => {
 
     const actions = await screen.findByLabelText('פעולות עבור תורם 1314')
     fireEvent.click(actions)
-    fireEvent.click(within(actions.closest('.desktop-donor-table') as HTMLElement)
-      .getByRole('button', { name: 'עריכת תורם' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'עריכת תורם' }))
     const dialog = screen.getByRole('dialog', { name: 'עריכת תורם 1314' })
     expect(within(dialog).getByLabelText(/מס׳ תורם/)).toHaveValue('1314')
     expect(within(dialog).getByLabelText(/מס׳ תורם/)).toHaveAttribute('readonly')
@@ -236,8 +236,7 @@ describe('DonorManagement', () => {
 
     const actions = await screen.findByLabelText('פעולות עבור תורם 1400')
     fireEvent.click(actions)
-    fireEvent.click(within(actions.closest('.desktop-donor-table') as HTMLElement)
-      .getByRole('button', { name: 'עריכת תורם' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'עריכת תורם' }))
     const dialog = screen.getByRole('dialog', { name: 'עריכת תורם 1400' })
     const jpeg = new File(['jpeg'], 'replacement.jpg', { type: 'image/jpeg' })
     fireEvent.change(within(dialog).getByLabelText('בחירת תמונת JPEG'), { target: { files: [jpeg] } })
@@ -267,8 +266,7 @@ describe('DonorManagement', () => {
 
     const rowActions = await screen.findByLabelText('פעולות עבור תורם 5006')
     fireEvent.click(rowActions)
-    fireEvent.click(within(rowActions.closest('.desktop-donor-table') as HTMLElement)
-      .getByRole('button', { name: 'צפייה בקובץ המידע' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'צפייה בקובץ המידע' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('ייתכן שהוא טרם הועלה')
     expect(screen.queryByText('private storage error')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'ניסיון חוזר' }))

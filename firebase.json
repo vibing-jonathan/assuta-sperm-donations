@@ -22,21 +22,42 @@
   "storage": {
     "rules": "storage.rules"
   },
-  "hosting": {
-    "public": "apps/admin-web/dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
-    "predeploy": [
-      "npm run build:admin"
-    ]
-  }
+  "hosting": [
+    {
+      "target": "admin",
+      "public": "apps/admin-web/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "predeploy": [
+        "npm run build:admin"
+      ]
+    },
+    {
+      "target": "client",
+      "public": "apps/user-web/dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "predeploy": [
+        "npm run build:user"
+      ]
+    }
+  ]
 }

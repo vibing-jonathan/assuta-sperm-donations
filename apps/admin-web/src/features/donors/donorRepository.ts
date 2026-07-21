@@ -2,6 +2,7 @@ import type { DocumentData, QueryDocumentSnapshot, Unsubscribe } from 'firebase/
 
 import { firebaseApp, getDatabase } from '../../lib/firebase'
 import { donorNumberClaimId, normalizeDonorNumber, type Donor, type DonorInput } from './donor'
+import { normalizeExtractedDonor } from './donorFieldRules'
 import { parseDonorNumberMetadata } from './donorNumberMetadata'
 
 export class DuplicateDonorNumberError extends Error {
@@ -29,6 +30,10 @@ function toDonor(snapshot: QueryDocumentSnapshot<DocumentData>): Donor {
   return { id: snapshot.id, ...data }
 }
 
+export function normalizeDonorForPersistence(input: DonorInput): DonorInput {
+  return normalizeExtractedDonor(input)
+}
+
 export const firestoreDonorRepository: DonorRepository = {
   async subscribe(onData, onError) {
     const { collection, onSnapshot, orderBy, query } = await import('firebase/firestore')
@@ -44,8 +49,7 @@ export const firestoreDonorRepository: DonorRepository = {
   async add(input, adminEmail) {
     const { collection, doc, getDocs, runTransaction, serverTimestamp } = await import('firebase/firestore')
     const database = await getDatabase()
-    const donorMetadata = parseDonorNumberMetadata(input.donorNumber)
-    const normalizedInput = { ...input, ...donorMetadata }
+    const normalizedInput = normalizeDonorForPersistence(input)
     const normalized = normalizeDonorNumber(normalizedInput.donorNumber)
     const existing = await getDocs(collection(database, 'donors'))
     if (existing.docs.some((snapshot) => normalizeDonorNumber(
@@ -83,8 +87,7 @@ export const firestoreDonorRepository: DonorRepository = {
   async update(id, currentDonorNumber, input, adminEmail) {
     const { collection, doc, getDocs, runTransaction, serverTimestamp } = await import('firebase/firestore')
     const database = await getDatabase()
-    const donorMetadata = parseDonorNumberMetadata(input.donorNumber)
-    const normalizedInput = { ...input, ...donorMetadata }
+    const normalizedInput = normalizeDonorForPersistence(input)
     const currentNumber = parseDonorNumberMetadata(currentDonorNumber).donorNumber
     const numberChanged = normalizeDonorNumber(currentNumber) !== normalizeDonorNumber(normalizedInput.donorNumber)
     const donorReference = doc(database, 'donors', id)

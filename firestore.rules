@@ -46,7 +46,8 @@ service cloud.firestore {
     }
 
     match /donors/{donorId} {
-      allow read, delete: if isAdmin();
+      allow read: if isAdmin();
+      allow delete: if isAdmin();
       allow create: if isAdmin()
         && hasValidDonorSchema()
         && !request.resource.data.keys().hasAny(['profileImageInput', 'profileImage'])

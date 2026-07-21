@@ -20,6 +20,7 @@ describe('DonorProfileAvatar', () => {
 
     await waitFor(() => expect(repository.getImageUrl).toHaveBeenCalledWith('profiles/image.jpg'))
     expect(document.querySelector('img')).toHaveAttribute('src', 'blob:profile')
+    expect(screen.getByText('AI')).toHaveClass('donor-profile-ai-tag')
   })
 
   it('exposes an accessible background-processing status without fetching', () => {
@@ -43,6 +44,7 @@ describe('DonorProfileAvatar', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'הגדלת תמונת הפרופיל של תורם 1000' }))
     const dialog = screen.getByRole('dialog', { name: 'תמונת פרופיל של תורם 1000' })
     expect(dialog.querySelector('img')).toHaveAttribute('src', 'blob:full-resolution-profile')
+    expect(dialog.querySelector('.profile-preview-ai-tag')).toHaveTextContent('AI')
     expect(repository.getImageUrl).toHaveBeenCalledOnce()
 
     fireEvent.keyDown(document, { key: 'Escape' })

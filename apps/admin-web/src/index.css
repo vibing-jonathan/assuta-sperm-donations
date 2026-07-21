@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, Arial, "Noto Sans Hebrew", sans-serif;
-  color: #0b1c30;
-  background: #f8f9fb;
+  color: var(--color-text-primary, #17172b);
+  background: var(--color-bg-page, #f6f7fa);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

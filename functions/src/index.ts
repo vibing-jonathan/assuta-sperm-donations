@@ -6,6 +6,7 @@ import { defineSecret } from 'firebase-functions/params'
 import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore'
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 import { onTaskDispatched } from 'firebase-functions/v2/tasks'
+import { getFirestore } from 'firebase-admin/firestore'
 
 import { getAllowedAdminEmail } from './admin.js'
 import { deleteAllDonorRecords } from './deleteDonors.js'
@@ -33,12 +34,58 @@ import {
   readAdminProfileImageUpload,
   storeAdminProfileImage,
 } from './uploadDonorProfileImage.js'
+import {
+  createUserAppSession,
+  InvalidUserAppCredentialError,
+  InvalidUserAppLoginRequestError,
+  USER_ACCESS_SETTINGS_PATH,
+} from './userAppAccess.js'
+import { userDonorRecord } from './userDonors.js'
 
 const geminiApiKey = defineSecret('GEMINI_API_KEY')
 const MAX_RELEVANT_PDF_BYTES = 8 * 1024 * 1024
 const GEMINI_MODEL = 'gemini-3.5-flash'
 
 if (getApps().length === 0) initializeApp()
+
+export const loginUserApp = onCall({
+  region: 'europe-west1',
+  maxInstances: 10,
+}, async (request) => {
+  try {
+    const token = await createUserAppSession(
+      request.data,
+      async () => (await getFirestore().doc(USER_ACCESS_SETTINGS_PATH).get()).data(),
+      (uid, claims) => getAuth().createCustomToken(uid, claims),
+    )
+    return { token }
+  } catch (error) {
+    if (error instanceof InvalidUserAppLoginRequestError) {
+      throw new HttpsError('invalid-argument', 'Invalid login request.')
+    }
+    if (error instanceof InvalidUserAppCredentialError) {
+      throw new HttpsError('permission-denied', 'Invalid username or password.')
+    }
+    logger.error('User app login failed.', readErrorDiagnostics(error))
+    throw new HttpsError('internal', 'Login failed.')
+  }
+})
+
+export const listUserDonors = onCall({
+  region: 'europe-west1',
+  maxInstances: 10,
+}, async (request) => {
+  if (request.auth?.token.userApp !== true) {
+    throw new HttpsError('permission-denied', 'User app access is required.')
+  }
+  try {
+    const snapshot = await getFirestore().collection('donors').orderBy('createdAt', 'desc').get()
+    return { donors: snapshot.docs.map((document) => userDonorRecord(document.id, document.data())) }
+  } catch (error) {
+    logger.error('User donor list failed.', readErrorDiagnostics(error))
+    throw new HttpsError('internal', 'Donors could not be loaded.')
+  }
+})
 
 interface ExtractionRequest {
   pdfBase64: string

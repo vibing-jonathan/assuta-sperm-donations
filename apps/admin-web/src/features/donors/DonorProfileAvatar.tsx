@@ -76,6 +76,7 @@ export function DonorProfileAvatar({
               }}
             >
               <img src={url} alt="" loading="lazy" decoding="async" />
+              <span className="donor-profile-ai-tag" aria-hidden="true">AI</span>
             </button>
           )
         : <span aria-label={status}><span aria-hidden="true">{isProcessing ? '◌' : '♙'}</span></span>}
@@ -99,7 +100,8 @@ export function DonorProfileAvatar({
               autoFocus
               onClick={() => setIsPreviewOpen(false)}
             >×</button>
-            <img src={url} alt={`תמונת פרופיל סינתטית של תורם ${donor.donorNumber}`} />
+            <img src={url} alt={`תמונת פרופיל שנוצרה באמצעות בינה מלאכותית של תורם ${donor.donorNumber}`} />
+            <span className="profile-preview-ai-tag" aria-hidden="true">AI</span>
           </section>
         </div>,
         document.body,

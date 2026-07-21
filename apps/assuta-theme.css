@@ -1,0 +1,60 @@
+:root {
+  /* Assuta brand anchors and accessible derivatives. */
+  --assuta-navy-950: #03033f;
+  --assuta-navy-900: #05055f;
+  --assuta-navy-800: #18187a;
+  --assuta-navy-700: #2a2a91;
+  --assuta-navy-100: #e8e8f1;
+  --assuta-navy-50: #f5f5fa;
+
+  --assuta-mint-700: #176534;
+  --assuta-mint-600: #2e7d44;
+  --assuta-mint-500: #7be583;
+  --assuta-mint-200: #c8f3cc;
+  --assuta-mint-100: #e8f8ea;
+  --assuta-mint-50: #f3fbf4;
+
+  --color-bg-page: #f6f7fa;
+  --color-bg-surface: #fff;
+  --color-bg-surface-soft: #eff0f5;
+  --color-bg-inverse: var(--assuta-navy-900);
+  --color-text-primary: #17172b;
+  --color-text-secondary: #5f6073;
+  --color-text-disabled: #85869a;
+  --color-text-inverse: #fff;
+
+  --color-border-default: #d7d8e3;
+  --color-border-control: #838598;
+  --color-border-strong: #5f6073;
+
+  --color-action-primary-bg: var(--assuta-navy-900);
+  --color-action-primary-hover: var(--assuta-navy-800);
+  --color-action-primary-pressed: var(--assuta-navy-950);
+  --color-action-primary-text: #fff;
+  --color-action-primary-soft: var(--assuta-navy-100);
+
+  --color-action-mint-bg: var(--assuta-mint-500);
+  --color-action-mint-hover: #69d974;
+  --color-action-mint-pressed: #4fc661;
+  --color-action-mint-text: var(--assuta-navy-900);
+  --color-selection-bg: var(--assuta-mint-100);
+  --color-selection-border: var(--assuta-mint-600);
+
+  --color-focus: #3434b5;
+  --color-focus-inverse: var(--assuta-mint-500);
+  --focus-ring: 0 0 0 2px #fff, 0 0 0 5px var(--color-focus);
+  --focus-ring-inverse: 0 0 0 2px var(--assuta-navy-900), 0 0 0 5px var(--color-focus-inverse);
+
+  --color-success: var(--assuta-mint-700);
+  --color-success-bg: #eaf7ed;
+  --color-warning: #7a4500;
+  --color-warning-bg: #fff3d6;
+  --color-error: #a82020;
+  --color-error-bg: #fdecec;
+
+  --color-disabled-bg: #e1e2ea;
+  --color-disabled-text: #75768a;
+  --color-overlay: rgb(5 5 47 / 64%);
+  --shadow-1: 0 1px 2px rgb(5 5 47 / 8%), 0 4px 12px rgb(5 5 47 / 6%);
+  --shadow-2: 0 10px 30px rgb(5 5 47 / 12%), 0 2px 8px rgb(5 5 47 / 8%);
+}

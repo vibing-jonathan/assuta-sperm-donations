@@ -10,13 +10,17 @@ service firebase.storage {
         ];
     }
 
+    function isUserApp() {
+      return request.auth != null && request.auth.token.userApp == true;
+    }
+
     match /donor-pages/{donorKey}/{fileName} {
-      allow read: if isAdmin() && fileName == 'details.pdf';
+      allow read: if (isAdmin() || isUserApp()) && fileName == 'details.pdf';
       allow write: if false;
     }
 
     match /donor-profile-images/{donorId}/{fileName} {
-      allow read: if isAdmin() && fileName.matches('[a-f0-9]{64}\\.jpg');
+      allow read: if (isAdmin() || isUserApp()) && fileName.matches('[a-f0-9]{64}\\.jpg');
       allow write: if false;
     }
 
