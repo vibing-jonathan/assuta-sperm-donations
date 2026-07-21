@@ -165,10 +165,6 @@ The Storage bucket CORS policy must allow both Hosting origins so authenticated 
 profile images and donor PDFs succeed. The production policy is mirrored in `storage.cors.json`; apply
 that file to a replacement bucket before deploying either frontend.
 
-## Google Stitch MCP
-
-The repository configures Stitch in `.codex/config.toml` without storing its API key. `STITCH_API_KEY` must be present in the operating-system environment that launches Codex; a project `.env` file is not automatically loaded by the MCP host. Restart Codex after setting it.
-
 ## Sensitive local files
 
 The local `.env`, donor PDF sources, uploads, and private files are excluded from Git. The Gemini key must never be exposed through a `VITE_` variable or browser code; the future PDF extraction flow will use a protected Firebase backend and Secret Manager.
