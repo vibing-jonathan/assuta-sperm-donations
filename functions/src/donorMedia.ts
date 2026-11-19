@@ -1,6 +1,6 @@
 import { getAllowedAdminEmail } from './admin.js'
 
-const PROFILE_IMAGE_PATH = /^donor-profile-images\/[A-Za-z0-9_-]{1,128}\/[a-f0-9]{64}\.jpg$/
+const PROFILE_IMAGE_PATH = /^donor-profile-images\/[A-Za-z0-9_-]{1,128}\/[a-f0-9]{64}(\.thumbnail|\.display-512)?\.jpg$/
 const DETAIL_PDF_PATH = /^donor-pages\/[a-f0-9]{2,800}\/details\.pdf$/
 
 export class InvalidDonorMediaPathError extends Error {}
