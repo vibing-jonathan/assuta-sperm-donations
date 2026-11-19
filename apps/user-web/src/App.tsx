@@ -259,7 +259,7 @@ function WelcomeScreen({ donorCount, onStart, onLogout }: WelcomeScreenProps) {
         <div className="welcome-content">
           <div className="welcome-symbol" aria-hidden="true"><BrandMark /></div>
           <p className="eyebrow">לפני שמתחילות</p>
-          <h2>שמונה שאלות קצרות, בדרך להתאמה הקרובה ביותר</h2>
+          <h2>חמש שאלות קצרות, בדרך להתאמה הקרובה ביותר</h2>
           <p>נשאל על רקע וכמה מאפיינים. בכל שלב אפשר לבחור <strong>״לא משנה לי״</strong>, ותמיד אפשר לחזור ולשנות.</p>
           <div className="info-card"><Icon name="info" /><p>הבחירות לא מסננות תורמים. הן משמשות לדירוג כל {donorCount} התורמים לפי מידת הקרבה להעדפות שלך.</p></div>
         </div>
@@ -675,6 +675,7 @@ export function App({
   }, [donorRepository, retry, session])
 
   const ranked = useMemo(() => rankClosestDonors(donors, answers), [answers, donors])
+  const lastQuestionIndex = useMemo(() => buildQuestions(donors).length - 1, [donors])
   const selectedResult = selectedDonorId ? ranked.find((result) => result.donor.id === selectedDonorId) : undefined
 
   async function logout() {
@@ -695,12 +696,12 @@ export function App({
       if (questionIndex === 0) setScreen('welcome')
       else setQuestionIndex((value) => value - 1)
     }} onNext={() => {
-      if (questionIndex === 7) setScreen('results')
+      if (questionIndex === lastQuestionIndex) setScreen('results')
       else setQuestionIndex((value) => value + 1)
     }} /></PublicSiteFrame>
   }
   if (screen === 'results') return <PublicSiteFrame><ResultsScreen donors={donors} answers={answers} mediaRepository={mediaRepository} currentIndex={resultIndex} onIndexChange={setResultIndex} onBack={() => {
-    setQuestionIndex(7)
+    setQuestionIndex(lastQuestionIndex)
     setScreen('questions')
   }} onSelect={(donorId) => {
     setSelectedDonorId(donorId)

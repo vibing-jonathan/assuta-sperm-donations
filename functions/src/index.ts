@@ -7,6 +7,7 @@ import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/fire
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https'
 import { onTaskDispatched } from 'firebase-functions/v2/tasks'
 import { getFirestore } from 'firebase-admin/firestore'
+import { getStorage } from 'firebase-admin/storage'
 
 import { getAllowedAdminEmail } from './admin.js'
 import { deleteAllDonorRecords } from './deleteDonors.js'
@@ -28,6 +29,12 @@ import {
   type ProfileImageTaskPayload,
 } from './donorProfileImages.js'
 import { donorStorageKey } from './donorPages.js'
+import {
+  InvalidDonorMediaPathError,
+  canReadDonorMedia,
+  donorMediaContentType,
+  readDonorMediaPath,
+} from './donorMedia.js'
 import {
   DonorNotFoundError,
   InvalidAdminProfileImageError,
@@ -445,6 +452,69 @@ export const uploadDonorProfileImage = onRequest({
       ...readErrorDiagnostics(error),
     })
     response.status(500).json({ error: 'PROFILE_IMAGE_UPLOAD_FAILED' })
+  }
+})
+
+export const getDonorMedia = onRequest({
+  region: 'europe-west1',
+  timeoutSeconds: 60,
+  memory: '256MiB',
+  maxInstances: 10,
+  invoker: 'public',
+  cors: true,
+}, async (request, response) => {
+  if (request.method !== 'GET') {
+    response.status(405).json({ error: 'METHOD_NOT_ALLOWED' })
+    return
+  }
+  const authorization = request.get('authorization')
+  if (!authorization?.startsWith('Bearer ')) {
+    response.status(401).json({ error: 'AUTHENTICATION_REQUIRED' })
+    return
+  }
+  let decodedToken
+  try {
+    decodedToken = await getAuth().verifyIdToken(authorization.slice('Bearer '.length))
+  } catch {
+    response.status(401).json({ error: 'INVALID_AUTHENTICATION' })
+    return
+  }
+  if (!canReadDonorMedia(decodedToken)) {
+    response.status(403).json({ error: 'MEDIA_ACCESS_REQUIRED' })
+    return
+  }
+
+  let path: string
+  try {
+    path = readDonorMediaPath(request.query.path)
+  } catch (error) {
+    if (error instanceof InvalidDonorMediaPathError) {
+      response.status(400).json({ error: 'INVALID_MEDIA_PATH' })
+      return
+    }
+    throw error
+  }
+
+  try {
+    const [bytes] = await getStorage().bucket().file(path).download()
+    response.set({
+      'Cache-Control': 'private, max-age=3600',
+      'Content-Type': donorMediaContentType(path),
+      'Content-Length': String(bytes.byteLength),
+      'X-Content-Type-Options': 'nosniff',
+    })
+    response.status(200).send(bytes)
+  } catch (error) {
+    const status = Number((error as { code?: unknown }).code)
+    if (status === 404) {
+      response.status(404).json({ error: 'MEDIA_NOT_FOUND' })
+      return
+    }
+    logger.error('Donor media download failed.', {
+      path,
+      ...readErrorDiagnostics(error),
+    })
+    response.status(500).json({ error: 'MEDIA_DOWNLOAD_FAILED' })
   }
 })
 

@@ -90,17 +90,17 @@ describe('user app flow', () => {
 
   it('lets the user browse every ranked donor from the swipe deck', async () => {
     render(<App accessService={accessService} donorRepository={donorRepository} mediaRepository={mediaRepository} />)
-    await screen.findByRole('heading', { name: /שמונה שאלות קצרות/ })
+    await screen.findByRole('heading', { name: /חמש שאלות קצרות/ })
     expect(screen.getByRole('contentinfo')).toHaveTextContent('בשיתוף פעולה עם Assuta Superm')
     expect(screen.getByRole('link', { name: 'מעבר לאתר Assuta Superm' })).toHaveAttribute('href', 'https://superm.assuta.co.il/')
     expect(screen.getByRole('link', { name: 'מעבר לאתר Assuta Superm' })).toHaveAttribute('target', '_blank')
     expect(screen.getByRole('img', { name: 'לוגו Assuta Superm' })).toHaveAttribute('src', '/assuta-superm-logo.png')
     fireEvent.click(screen.getByRole('button', { name: 'מתחילות' }))
 
-    for (let question = 0; question < 8; question += 1) {
-      const choices = screen.getByRole(question === 0 ? 'group' : 'radiogroup', { name: 'אפשרויות תשובה' })
-      fireEvent.click(within(choices).getByRole(question === 0 ? 'checkbox' : 'radio', { name: ANY_OPTION }))
-      fireEvent.click(screen.getByRole('button', { name: question === 7 ? 'מציאת התאמות' : 'המשך' }))
+    for (let question = 0; question < 5; question += 1) {
+      const choices = screen.getByRole('radiogroup', { name: 'אפשרויות תשובה' })
+      fireEvent.click(within(choices).getByRole('radio', { name: ANY_OPTION }))
+      fireEvent.click(screen.getByRole('button', { name: question === 4 ? 'מציאת התאמות' : 'המשך' }))
     }
 
     await waitFor(() => expect(screen.getByRole('heading', { name: 'ההתאמות הקרובות ביותר' })).toBeInTheDocument())

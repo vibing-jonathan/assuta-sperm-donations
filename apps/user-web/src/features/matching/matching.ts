@@ -1,21 +1,18 @@
 import { isCarrierFree, isCmvNegative, type Donor } from '../donors/donor'
 
 export const ANY_OPTION = 'לא משנה לי'
-export const HAIR_TEXTURES = ['חלק', 'גלי', 'מתולתל'] as const
-const COLOR_SHADE_WORDS = new Set([
-  'בהיר', 'בהירה', 'בהירים', 'בהירות',
-  'כהה', 'כהים', 'כהות',
-  'מאוד', 'בינוני', 'בינונית',
-  'light', 'dark', 'very', 'medium',
-])
+export const LIGHT_EYES_OPTION = 'עיניים בהירות'
+export const DARK_EYES_OPTION = 'עיניים כהות'
+
+type EyeShade = typeof LIGHT_EYES_OPTION | typeof DARK_EYES_OPTION
+
+const DARK_EYE_COLORS = /(?:חום|חומה|חומים|חומות|שחור|שחורה|שחורים|שחורות|כהה|כהים|כהות|brown|black|dark|hazel)/i
+const LIGHT_EYE_COLORS = /(?:כחול|כחולה|כחולים|כחולות|ירוק|ירוקה|ירוקים|ירוקות|אפור|אפורה|אפורים|אפורות|תכלת|בהיר|בהירה|בהירים|בהירות|דבש|ענבר|blue|green|grey|gray|light|amber)/i
 
 export type PreferenceKey =
-  | 'origin'
   | 'religion'
   | 'carrierFree'
   | 'cmvNegative'
-  | 'hairColor'
-  | 'hairTexture'
   | 'skinColor'
   | 'eyeColor'
 
@@ -37,12 +34,9 @@ interface CriterionScore {
 }
 
 const WEIGHTS: Record<PreferenceKey, number> = {
-  origin: 1.2,
   religion: 1.1,
   carrierFree: 1.4,
   cmvNegative: 1.3,
-  hairColor: 0.8,
-  hairTexture: 0.7,
   skinColor: 0.8,
   eyeColor: 0.9,
 }
@@ -51,58 +45,17 @@ function clean(value: string) {
   return value.normalize('NFKC').replace(/\s+/g, ' ').trim()
 }
 
-function colorComparisonKey(value: string) {
-  return clean(value).toLocaleLowerCase('he')
-}
-
-function combineShadeParts(parts: string[]) {
-  const colors: string[] = []
-  for (let index = 0; index < parts.length; index += 1) {
-    const part = parts[index]!
-    const words = part.split(/\s+/)
-    if (words.length === 1 && COLOR_SHADE_WORDS.has(colorComparisonKey(part))) {
-      if (colors.length > 0) colors[colors.length - 1] = `${colors.at(-1)} ${part}`
-      else if (parts[index + 1]) {
-        colors.push(`${part} ${parts[index + 1]}`)
-        index += 1
-      }
-      continue
-    }
-    colors.push(part)
-  }
-  return colors
-}
-
-/** Splits composite colors while preserving shade names such as "חום-בהיר". */
-export function colorValues(value: string) {
-  const separated = clean(value)
-    .split(/\s*(?:,|;|\/|\||\+)\s*/)
-    .flatMap((token) => combineShadeParts(token.split(/\s*[-–—]\s*/).map(clean).filter(Boolean)))
-    .filter(Boolean)
-  const unique = new Map<string, string>()
-  for (const color of separated) {
-    const key = colorComparisonKey(color)
-    if (key && !unique.has(key)) unique.set(key, color)
-  }
-  return [...unique.values()]
-}
-
 export function splitListValues(value: string) {
   return value.split(',').map(clean).filter(Boolean)
 }
 
-export function hairAttributes(value: string) {
-  const tokens = splitListValues(value)
-  const textures = HAIR_TEXTURES.filter((texture) => tokens.some((token) => token.includes(texture)))
-  const colors = tokens
-    .map((token) => HAIR_TEXTURES.reduce((current, texture) => current.replace(texture, ''), token))
-    .map((token) => clean(token.replace(/^[-–—,]+|[-–—,]+$/g, '')))
-    .flatMap(colorValues)
-  const uniqueColors = new Map(colors.map((color) => [colorComparisonKey(color), color]))
-  return {
-    colors: [...uniqueColors.values()],
-    textures: [...textures],
-  }
+/** Maps detailed donor eye colors into the two choices exposed by the user app. */
+export function eyeShade(value: string): EyeShade | null {
+  const normalized = clean(value).toLocaleLowerCase('he')
+  if (!normalized) return null
+  if (normalized === DARK_EYES_OPTION || DARK_EYE_COLORS.test(normalized)) return DARK_EYES_OPTION
+  if (normalized === LIGHT_EYES_OPTION || LIGHT_EYE_COLORS.test(normalized)) return LIGHT_EYES_OPTION
+  return null
 }
 
 function selectedAnswer(answers: PreferenceAnswers, key: PreferenceKey) {
@@ -118,11 +71,6 @@ function exactSimilarity(actual: string, expected: string) {
 
 function scoreCriterion(donor: Donor, key: PreferenceKey, answer: string | string[]): CriterionScore {
   const expected = Array.isArray(answer) ? answer : [answer]
-  if (key === 'origin') {
-    const actual = new Set(splitListValues(donor.origin))
-    const overlap = expected.filter((value) => actual.has(clean(value))).length
-    return { weight: WEIGHTS[key], similarity: actual.size ? overlap / expected.length : 0.25, label: 'מוצא' }
-  }
   if (key === 'carrierFree') {
     const expectedValue = expected[0] === 'כן'
     return { weight: WEIGHTS[key], similarity: isCarrierFree(donor) === expectedValue ? 1 : 0, label: 'נשאויות' }
@@ -131,22 +79,12 @@ function scoreCriterion(donor: Donor, key: PreferenceKey, answer: string | strin
     const expectedValue = expected[0] === 'כן'
     return { weight: WEIGHTS[key], similarity: donor.cmvIgg ? (isCmvNegative(donor) === expectedValue ? 1 : 0) : 0.25, label: 'CMV' }
   }
-  if (key === 'hairColor') {
-    const actual = hairAttributes(donor.hairColor).colors
-    const expectedColor = colorComparisonKey(expected[0]!)
-    return { weight: WEIGHTS[key], similarity: actual.length ? (actual.some((color) => colorComparisonKey(color) === expectedColor) ? 1 : 0) : 0.25, label: 'צבע שיער' }
-  }
-  if (key === 'hairTexture') {
-    const actual = hairAttributes(donor.hairColor).textures
-    return { weight: WEIGHTS[key], similarity: actual.length ? (actual.includes(expected[0] as typeof HAIR_TEXTURES[number]) ? 1 : 0) : 0.25, label: 'מרקם שיער' }
-  }
   if (key === 'eyeColor') {
-    const actual = colorValues(donor.eyeColor)
-    const expectedColor = colorComparisonKey(expected[0]!)
-    return { weight: WEIGHTS[key], similarity: actual.length ? (actual.some((color) => colorComparisonKey(color) === expectedColor) ? 1 : 0) : 0.25, label: 'צבע עיניים' }
+    const actual = eyeShade(donor.eyeColor)
+    return { weight: WEIGHTS[key], similarity: actual ? (actual === expected[0] ? 1 : 0) : 0.25, label: 'גוון עיניים' }
   }
   const field = key === 'skinColor' ? donor.skinColor : donor.religion
-  const labels = { religion: 'דת', skinColor: 'גוון עור', eyeColor: 'צבע עיניים' }
+  const labels = { religion: 'דת', skinColor: 'גוון עור' }
   return { weight: WEIGHTS[key], similarity: exactSimilarity(field, expected[0]!), label: labels[key] }
 }
 

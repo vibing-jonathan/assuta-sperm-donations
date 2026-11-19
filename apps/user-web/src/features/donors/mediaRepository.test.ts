@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { donorDetailPdfPath, donorStorageKey } from './mediaRepository'
+import { DONOR_MEDIA_ENDPOINT, donorDetailPdfPath, donorStorageKey } from './mediaRepository'
 
 describe('donor media paths', () => {
   it('matches the backend UTF-8 hex storage key', () => {
@@ -13,5 +13,10 @@ describe('donor media paths', () => {
 
   it('removes legacy carrier markers before creating the path', () => {
     expect(donorStorageKey('Donor 1400***')).toBe(donorStorageKey('Donor 1400'))
+  })
+
+  it('uses the authenticated media proxy instead of the browser Storage endpoint', () => {
+    expect(DONOR_MEDIA_ENDPOINT).toContain('cloudfunctions.net/getDonorMedia')
+    expect(DONOR_MEDIA_ENDPOINT).not.toContain('firebasestorage.googleapis.com')
   })
 })

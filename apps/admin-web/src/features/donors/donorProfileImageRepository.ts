@@ -1,4 +1,5 @@
-import { auth, firebaseApp } from '../../lib/firebase'
+import { auth } from '../../lib/firebase'
+import { getDonorMediaBlob } from './donorMediaRepository'
 
 export interface DonorProfileImageRepository {
   getImageUrl(storagePath: string): Promise<string>
@@ -39,8 +40,7 @@ export const storageDonorProfileImageRepository: DonorProfileImageRepository = {
   getImageUrl(storagePath) {
     const cached = imageUrlCache.get(storagePath)
     if (cached) return cached
-    const request = import('firebase/storage').then(async ({ getBlob, getStorage, ref }) => {
-      const blob = await getBlob(ref(getStorage(firebaseApp), storagePath))
+    const request = getDonorMediaBlob(storagePath).then((blob) => {
       return URL.createObjectURL(blob)
     })
     imageUrlCache.set(storagePath, request)

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import type { Donor } from '../donors/donor'
-import { ANY_OPTION, colorValues, hairAttributes, rankClosestDonors } from './matching'
+import {
+  ANY_OPTION,
+  DARK_EYES_OPTION,
+  LIGHT_EYES_OPTION,
+  eyeShade,
+  rankClosestDonors,
+} from './matching'
 import { buildQuestions } from './questions'
 
 function donor(overrides: Partial<Donor>): Donor {
@@ -24,77 +30,55 @@ function donor(overrides: Partial<Donor>): Donor {
 
 describe('closest donor ranking', () => {
   it('keeps every donor and ranks the closest one first', () => {
-    const close = donor({ id: 'close', donorNumber: 'Close', eyeColor: 'כחול', hairColor: 'שחור, גלי' })
-    const partial = donor({ id: 'partial', donorNumber: 'Partial', eyeColor: 'כחול', hairColor: 'חום, חלק' })
-    const far = donor({ id: 'far', donorNumber: 'Far', eyeColor: 'ירוק', hairColor: 'בלונד, מתולתל' })
-    const ranked = rankClosestDonors([far, partial, close], { eyeColor: 'כחול', hairTexture: 'גלי' })
+    const close = donor({ id: 'close', donorNumber: 'Close', eyeColor: 'כחול' })
+    const partial = donor({ id: 'partial', donorNumber: 'Partial', eyeColor: 'ירוק' })
+    const far = donor({ id: 'far', donorNumber: 'Far', eyeColor: 'חום' })
+    const ranked = rankClosestDonors([far, partial, close], { eyeColor: LIGHT_EYES_OPTION })
     expect(ranked.map((item) => item.donor.id)).toEqual(['close', 'partial', 'far'])
     expect(ranked).toHaveLength(3)
     expect(ranked[0]?.score).toBe(100)
   })
 
   it('does not count “לא משנה לי” as an active preference', () => {
-    const ranked = rankClosestDonors([donor({})], { eyeColor: ANY_OPTION, origin: [ANY_OPTION] })
+    const ranked = rankClosestDonors([donor({})], { eyeColor: ANY_OPTION })
     expect(ranked[0]?.score).toBeNull()
     expect(ranked[0]?.activePreferenceCount).toBe(0)
-  })
-
-  it('uses partial origin overlap instead of filtering', () => {
-    const both = donor({ id: 'both', origin: 'ישראל, רוסיה' })
-    const one = donor({ id: 'one', origin: 'ישראל' })
-    const neither = donor({ id: 'neither', origin: 'פולין' })
-    const ranked = rankClosestDonors([neither, one, both], { origin: ['ישראל', 'רוסיה'] })
-    expect(ranked.map((item) => item.donor.id)).toEqual(['both', 'one', 'neither'])
-    expect(ranked.map((item) => item.score)).toEqual([100, 50, 0])
   })
 
   it('gives carrier and CMV preferences more influence than appearance preferences', () => {
     const medicallyCloser = donor({ id: 'medical', geneticCarrierStatus: 'שלילי', cmvIgg: 'שלילי', eyeColor: 'חום' })
     const visuallyCloser = donor({ id: 'visual', geneticCarrierStatus: 'חיובי', cmvIgg: 'חיובי', eyeColor: 'כחול' })
     const ranked = rankClosestDonors([visuallyCloser, medicallyCloser], {
-      carrierFree: 'כן', cmvNegative: 'כן', eyeColor: 'כחול',
+      carrierFree: 'כן', cmvNegative: 'כן', eyeColor: LIGHT_EYES_OPTION,
     })
     expect(ranked[0]?.donor.id).toBe('medical')
   })
 
-  it('matches every distinctive eye and hair color in a composite value', () => {
-    const composite = donor({ id: 'composite', eyeColor: 'חום-ירוק', hairColor: 'חום-שחור, גלי' })
+  it('groups detailed eye colors into light and dark eyes', () => {
+    expect(eyeShade('כחול-ירוק')).toBe(LIGHT_EYES_OPTION)
+    expect(eyeShade('אפור בהיר')).toBe(LIGHT_EYES_OPTION)
+    expect(eyeShade('חום')).toBe(DARK_EYES_OPTION)
+    expect(eyeShade('שחור')).toBe(DARK_EYES_OPTION)
+    expect(eyeShade('')).toBeNull()
 
-    expect(rankClosestDonors([composite], { eyeColor: 'חום' })[0]?.score).toBe(100)
-    expect(rankClosestDonors([composite], { eyeColor: 'ירוק' })[0]?.score).toBe(100)
-    expect(rankClosestDonors([composite], { hairColor: 'חום' })[0]?.score).toBe(100)
-    expect(rankClosestDonors([composite], { hairColor: 'שחור' })[0]?.score).toBe(100)
+    expect(rankClosestDonors([donor({ eyeColor: 'ירוק' })], { eyeColor: LIGHT_EYES_OPTION })[0]?.score).toBe(100)
+    expect(rankClosestDonors([donor({ eyeColor: 'חום' })], { eyeColor: LIGHT_EYES_OPTION })[0]?.score).toBe(0)
   })
 })
 
 describe('dynamic questions', () => {
-  it('derives answer values from donor data and separates hair color from texture', () => {
+  it('omits country and hair preferences and offers only grouped eye shades', () => {
     const donors = [
-      donor({ origin: 'ישראל, רוסיה', eyeColor: 'חום-ירוק', hairColor: 'חום בהיר-שחור, גלי' }),
-      donor({ id: 'two', origin: 'פולין', eyeColor: 'כחול', hairColor: 'שחור, מתולתל' }),
+      donor({ origin: 'ישראל, רוסיה', religion: 'יהודי, לאחר גיור', eyeColor: 'חום-ירוק', hairColor: 'חום בהיר-שחור, גלי' }),
+      donor({ id: 'two', origin: 'פולין', religion: 'לאחר גיור', eyeColor: 'כחול', hairColor: 'שחור, מתולתל' }),
     ]
     const questions = buildQuestions(donors)
-    expect(questions.find((question) => question.key === 'origin')?.options)
-      .toEqual(expect.arrayContaining(['ישראל', 'רוסיה', 'פולין', ANY_OPTION]))
-    expect(questions.find((question) => question.key === 'hairColor')?.options)
-      .toEqual(expect.arrayContaining(['חום בהיר', 'שחור', ANY_OPTION]))
-    expect(questions.find((question) => question.key === 'hairColor')?.options)
-      .not.toContain('חום בהיר-שחור')
-    expect(questions.find((question) => question.key === 'hairTexture')?.options)
-      .toEqual(['גלי', 'מתולתל', ANY_OPTION])
+    expect(questions.map((question) => question.key)).toEqual([
+      'religion', 'carrierFree', 'cmvNegative', 'skinColor', 'eyeColor',
+    ])
     expect(questions.find((question) => question.key === 'eyeColor')?.options)
-      .toEqual(expect.arrayContaining(['חום', 'ירוק', 'כחול', ANY_OPTION]))
-    expect(questions.find((question) => question.key === 'eyeColor')?.options)
-      .not.toContain('חום-ירוק')
-  })
-
-  it('parses combined hair attributes', () => {
-    expect(hairAttributes('חום כהה, מתולתל')).toEqual({ colors: ['חום כהה'], textures: ['מתולתל'] })
-    expect(hairAttributes('חום-שחור, גלי')).toEqual({ colors: ['חום', 'שחור'], textures: ['גלי'] })
-  })
-
-  it('splits distinct colors but keeps shade modifiers attached', () => {
-    expect(colorValues('חום-ירוק / כחול')).toEqual(['חום', 'ירוק', 'כחול'])
-    expect(colorValues('חום-בהיר')).toEqual(['חום בהיר'])
+      .toEqual([LIGHT_EYES_OPTION, DARK_EYES_OPTION, ANY_OPTION])
+    expect(questions.find((question) => question.key === 'religion')?.options)
+      .toEqual(['יהודי', ANY_OPTION])
   })
 })

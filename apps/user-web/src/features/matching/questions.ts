@@ -1,9 +1,8 @@
 import type { Donor } from '../donors/donor'
 import {
   ANY_OPTION,
-  HAIR_TEXTURES,
-  colorValues,
-  hairAttributes,
+  DARK_EYES_OPTION,
+  LIGHT_EYES_OPTION,
   splitListValues,
   type PreferenceKey,
 } from './matching'
@@ -26,23 +25,15 @@ function withAny(values: string[]) {
 }
 
 export function buildQuestions(donors: Donor[]): QuestionDefinition[] {
-  const origins = distinct(donors.flatMap((donor) => splitListValues(donor.origin)))
   const religions = distinct(donors.flatMap((donor) => splitListValues(donor.religion)))
-  const hairColors = distinct(donors.flatMap((donor) => hairAttributes(donor.hairColor).colors))
-  const availableTextures = HAIR_TEXTURES.filter((texture) => donors.some(
-    (donor) => hairAttributes(donor.hairColor).textures.includes(texture),
-  ))
+    .filter((religion) => religion !== 'לאחר גיור')
   const skinColors = distinct(donors.map((donor) => donor.skinColor))
-  const eyeColors = distinct(donors.flatMap((donor) => colorValues(donor.eyeColor)))
 
   return [
-    { key: 'origin', title: 'האם את מחפשת תורם ממוצא מסוים?', hint: 'אפשר לבחור יותר מאפשרות אחת', multi: true, options: withAny(origins) },
     { key: 'religion', title: 'האם את מחפשת תורם יהודי או מדת אחרת?', hint: 'בחרי את האפשרות הקרובה ביותר להעדפה שלך', options: withAny(religions) },
     { key: 'carrierFree', title: 'האם את מחפשת תורם ללא נשאויות?', hint: 'הבחירה תשפיע על הדירוג, אך לא תסנן תורמים', options: ['כן', 'לא', ANY_OPTION] },
     { key: 'cmvNegative', title: 'האם את מחפשת תורם עם CMV שלילי?', hint: 'הבחירה תשפיע על הדירוג, אך לא תסנן תורמים', options: ['כן', 'לא', ANY_OPTION] },
-    { key: 'hairColor', title: 'האם את מחפשת תורם עם צבע שיער מסוים?', hint: 'בחרי את האפשרות הקרובה ביותר להעדפה שלך', options: withAny(hairColors) },
-    { key: 'hairTexture', title: 'האם חשוב לך שיהיה לו שיער חלק, מתולתל או גלי?', hint: 'בחרי את האפשרות הקרובה ביותר להעדפה שלך', options: withAny([...availableTextures]) },
     { key: 'skinColor', title: 'האם את מחפשת תורם עם גוון עור מסוים?', hint: 'בחרי את האפשרות הקרובה ביותר להעדפה שלך', options: withAny(skinColors) },
-    { key: 'eyeColor', title: 'האם את מחפשת תורם עם צבע עיניים מסוים?', hint: 'בחרי את האפשרות הקרובה ביותר להעדפה שלך', options: withAny(eyeColors) },
+    { key: 'eyeColor', title: 'האם את מחפשת תורם עם עיניים בהירות או כהות?', hint: 'כחול וירוק נחשבים בהירים; חום ושחור נחשבים כהים', options: withAny([LIGHT_EYES_OPTION, DARK_EYES_OPTION]) },
   ]
 }
