@@ -14,6 +14,10 @@ describe('donor media access', () => {
 
     expect(readDonorMediaPath(imagePath)).toBe(imagePath)
     expect(readDonorMediaPath(pdfPath)).toBe(pdfPath)
+    for (const variant of ['thumbnail', 'display-512']) {
+      const variantPath = `donor-profile-images/donor_1/${'a'.repeat(64)}.${variant}.jpg`
+      expect(readDonorMediaPath(variantPath)).toBe(variantPath)
+    }
     expect(donorMediaContentType(imagePath)).toBe('image/jpeg')
     expect(donorMediaContentType(pdfPath)).toBe('application/pdf')
   })
@@ -21,6 +25,7 @@ describe('donor media access', () => {
   it('rejects unrelated files and path traversal', () => {
     expect(() => readDonorMediaPath('donor-pages/key/page-1.jpg')).toThrow(InvalidDonorMediaPathError)
     expect(() => readDonorMediaPath('../storage.rules')).toThrow(InvalidDonorMediaPathError)
+    expect(() => readDonorMediaPath(`donor-profile-images/donor_1/${'a'.repeat(64)}.original.jpg`)).toThrow(InvalidDonorMediaPathError)
     expect(() => readDonorMediaPath(['donor-pages/key/details.pdf'])).toThrow(InvalidDonorMediaPathError)
   })
 
